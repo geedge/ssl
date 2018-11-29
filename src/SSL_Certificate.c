@@ -1093,19 +1093,26 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		char* san = NULL;
 		int len = 0;
 		if(cnt>0)
-		{
-			a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)malloc(sizeof(st_san_t));
+		{			
+			a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)dictator_malloc(thread_seq, sizeof(st_san_t));
 			a_ssl_stream->stSSLCert->SSLSubAltName->count = cnt;
 			for (int i = 0; i < cnt; i++) 
 			{       
 				GENERAL_NAME* generalName = sk_GENERAL_NAME_value(subjectAltNames, i); 
 				san = (char*)ASN1_STRING_data((ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL));
+				/*
 				snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san[i],
 							sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san[i]),
 							"%s",
 							san);
+				*/
+				if(san!=NULL)
+				{
+					memcpy(a_ssl_stream->stSSLCert->SSLSubAltName->san[i],san,strlen(san));
+				}
 			}
 		}
-	}
+	}	
+	return SSL_RETURN_NORM;
 }
 

@@ -169,9 +169,9 @@ UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 							   pstClientServerName->server_name_len);
 						servernamelen = strlen((char*)(*a_ssl_stream)->stClientHello->server_name);
 						(*a_ssl_stream)->stClientHello->server_name[servernamelen] = '\0';
-						first_server_name = 1;                                        
-                                       pstClientServerName->server_name_list_len -= pstClientServerName->server_name_len;
-                                       cur_data += pstClientServerName->server_name_len;
+						first_server_name = 1; 
+						pstClientServerName->server_name_list_len -= pstClientServerName->server_name_len;
+						cur_data += pstClientServerName->server_name_len;
                                      
 #if PRINTF_CLIENT_HELLO
 		//printf("server_name:%s\n",(*a_ssl_stream)->stClientHello->server_name);	

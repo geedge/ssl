@@ -19,7 +19,7 @@
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20181108 = 0;
+int SSL_VERSION_1_20181129 = 0;
 
 void ssl_history()
 {
@@ -62,6 +62,8 @@ void ssl_history()
 //2018-06-29 V0.2 cert extension
 //2018-07-30 V0.2 APPLICATION_DATA bug
 //2018-11-08 V0.2 multi-san
+//2018-11-29 V0.2 san dictator_malloc
+
 
 //to do 
 //certificate ANSL 
@@ -267,7 +269,7 @@ int ssl_initSslStream(struct streaminfo *a_tcp, void **pme, int thread_seq)
 	memset(a_ssl_stream->stClientHello, 0, sizeof(a_ssl_stream->stClientHello));
 	ssl_initStructClientHello(a_ssl_stream->stClientHello);
 
-	a_ssl_stream->stServerHello = (st_server_hello_t*)malloc(sizeof(st_server_hello_t));
+	a_ssl_stream->stServerHello = (st_server_hello_t*)dictator_malloc(thread_seq,sizeof(st_server_hello_t));
 	memset(a_ssl_stream->stServerHello, 0, sizeof(a_ssl_stream->stServerHello));	
 	ssl_initStructServerHello(a_ssl_stream->stServerHello);
 	*/

@@ -1,7 +1,7 @@
 vpath %.a ../lib
 vpath %.h ./inc
 
-PAPP_PATH=/home/dumeijie/run2/
+PAPP_PATH=/home/lishu/sapp_ntc/
 
 #CFLAGS          =  -g3 -Wall -fPIC -Werror -O
 #CFLAGS          =  -g3 -Wall -fPIC -O
