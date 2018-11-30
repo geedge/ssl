@@ -1024,7 +1024,8 @@ UCHAR  fn_pGetSSLInfo_v1(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  stru
 
 UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct streaminfo *a_tcp,
 		        			unsigned long long region_flag, int thread_seq, void *a_packet)
-{
+{	
+	//return SSL_RETURN_NORM;
 	int data = 0;
 	
 	X509 * x509_handle = d2i_X509(NULL, (unsigned char const **)&pcCert, iLen);
@@ -1032,7 +1033,6 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 	{
 		return SSL_RETURN_NORM;
 	}
-
 	
 	if(NULL!=x509_handle->cert_info)
 	{
@@ -1091,25 +1091,24 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		GENERAL_NAMES* subjectAltNames = (GENERAL_NAMES*)X509_get_ext_d2i(x509_handle, NID_subject_alt_name, NULL, NULL);  
 		int cnt = sk_GENERAL_NAME_num(subjectAltNames);
 		char* san = NULL;
+		ASN1_STRING *san_name;
 		int len = 0;
 		if(cnt>0)
 		{			
 			a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)dictator_malloc(thread_seq, sizeof(st_san_t));
 			a_ssl_stream->stSSLCert->SSLSubAltName->count = cnt;
-			for (int i = 0; i < cnt; i++) 
+			for (int i = 0; i < cnt && i < SAN_MAXNUM; i++) 
 			{       
 				GENERAL_NAME* generalName = sk_GENERAL_NAME_value(subjectAltNames, i); 
-				san = (char*)ASN1_STRING_data((ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL));
-				/*
-				snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san[i],
-							sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san[i]),
-							"%s",
-							san);
-				*/
-				if(san!=NULL)
+				san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
+				if(ASN1_STRING_length(san_name)>0)
 				{
-					memcpy(a_ssl_stream->stSSLCert->SSLSubAltName->san[i],san,strlen(san));
-				}
+					san = (char*)ASN1_STRING_data(san_name);
+					snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san[i],
+							 sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san[i]),
+							 "%s",
+							 san);
+				}				
 			}
 		}
 	}	

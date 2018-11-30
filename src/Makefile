@@ -13,6 +13,8 @@ INCLUDES        = -I./inc/
 INCLUDES        += -I/usr/include/MESA/
 
 LIB		= -L./lib/ 
+#LIB		+= -lopenssl 
+LIB		+= /usr/lib64/ruby/openssl.so
 
 LIB_FILE	= $(wildcard ../lib/*.a)
 SOURCES		= $(wildcard *.c)
