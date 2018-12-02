@@ -235,7 +235,6 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 	int iUnAnaCertLen = iDataLen;	
 	char *pcCurSslCertificateData = pcSslCertificateData;
 	int return_val = 0;
-	memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t));	
 	cert_chain_t cert_unit[CERT_MAXNUM];
 	int	cert_num = 0;
 	int cert_cnt = ssl_read_all_cert(pcCurSslCertificateData, iUnAnaCertLen, cert_unit, CERT_MAXNUM);
@@ -295,14 +294,25 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 		a_ssl_stream->p_output_buffer->p_data = NULL;
 		a_ssl_stream->p_output_buffer->data_size = 0;
 		cert_num++;
-		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;
-
+		/*ÊÍ·ÅsanÄÚ´æ*/
+		if(a_ssl_stream->stSSLCert->SSLSubAltName!=NULL)
+		{
+			if(a_ssl_stream->stSSLCert->SSLSubAltName->san_array!=NULL)
+			{
+				dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubAltName->san_array);
+				a_ssl_stream->stSSLCert->SSLSubAltName->san_array = NULL;
+			}
+			dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubAltName);
+			a_ssl_stream->stSSLCert->SSLSubAltName = NULL;
+		}
+		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t)); 
 #if PRINTF_CERTIFICATE
-		cert_log();			
-#endif       
+		cert_log(); 		
+#endif 
+		
+		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;      
         pcCurSslCertificateData += a_ssl_stream->stSSLCert->certlen;
-        iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 		
-		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t));       
+        iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 			      
     }
 	return SSL_RETURN_NORM;
 }
@@ -1089,27 +1099,40 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 
 		/*subject bak*/	
 		GENERAL_NAMES* subjectAltNames = (GENERAL_NAMES*)X509_get_ext_d2i(x509_handle, NID_subject_alt_name, NULL, NULL);  
+		if(!subjectAltNames) return SSL_RETURN_NORM;
 		int cnt = sk_GENERAL_NAME_num(subjectAltNames);
 		char* san = NULL;
 		ASN1_STRING *san_name;
 		int len = 0;
+		GENERAL_NAME* generalName;
 		if(cnt>0)
 		{			
 			a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)dictator_malloc(thread_seq, sizeof(st_san_t));
-			a_ssl_stream->stSSLCert->SSLSubAltName->count = cnt;
-			for (int i = 0; i < cnt && i < SAN_MAXNUM; i++) 
+			a_ssl_stream->stSSLCert->SSLSubAltName->san_array = (san_t*)dictator_malloc(thread_seq, cnt*sizeof(san_t));
+			memset(a_ssl_stream->stSSLCert->SSLSubAltName->san_array,0,cnt*sizeof(san_t));
+			a_ssl_stream->stSSLCert->SSLSubAltName->count = 0;
+			for (int i = 0; i < cnt; i++)
 			{       
-				GENERAL_NAME* generalName = sk_GENERAL_NAME_value(subjectAltNames, i); 
-				san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
-				if(ASN1_STRING_length(san_name)>0)
+				generalName = sk_GENERAL_NAME_value(subjectAltNames, i);
+				if(!generalName) return SSL_RETURN_NORM;
+				if(GEN_DNS == generalName->type)
 				{
-					san = (char*)ASN1_STRING_data(san_name);
-					snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san[i],
-							 sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san[i]),
-							 "%s",
-							 san);
-				}				
+					san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
+					if(ASN1_STRING_length(san_name)>0)
+					{
+						san = (char*)ASN1_STRING_data(san_name);
+						snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san,
+								 sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san),
+								 "%s",
+								 san);						
+						a_ssl_stream->stSSLCert->SSLSubAltName->count++;
+					}	
+				}			
 			}
+		}
+		if(subjectAltNames)
+		{
+			GENERAL_NAMES_free(subjectAltNames);
 		}
 	}	
 	return SSL_RETURN_NORM;

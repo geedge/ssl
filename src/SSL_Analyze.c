@@ -355,11 +355,7 @@ void ssl_releaseSslStream(struct streaminfo *a_tcp, ssl_stream** pme, int thread
 		a_ssl_stream->business = NULL;
 	}
 	if(NULL !=  a_ssl_stream->stSSLCert)
-	{
-		if(a_ssl_stream->stSSLCert->SSLSubAltName!=NULL)
-		{
-			dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubAltName);
-		}
+	{		
 		dictator_free(thread_seq,a_ssl_stream->stSSLCert);
 		a_ssl_stream->stSSLCert = NULL;
 	}

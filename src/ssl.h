@@ -123,12 +123,17 @@ typedef struct _st_server_hello_t
 //#############################################certificate
 #define CERTIFICATE_HDRLEN		7
 #define SSL_CERTIFICATE_HDRLEN  3
-#define SAN_MAXNUM  			128
+//#define SAN_MAXNUM  			128
+
+typedef struct _san_t
+{
+	char 					san[64]; 
+}san_t;
 
 typedef struct _st_san_t
 {
 	int 					count;
-	char 					san[SAN_MAXNUM][64]; 
+	san_t* 					san_array; 					//Ö¸ÕëÊý×é
 }st_san_t;
 
 typedef struct _st_cert_t

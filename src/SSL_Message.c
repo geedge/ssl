@@ -175,8 +175,9 @@ UCHAR ssl_analyseHandShake(char *pcSslData,  int iAllMsgLen,  int iSslUnAnalyseL
 			if(a_ssl_stream->stSSLCert==NULL)
 			{
 				a_ssl_stream->stSSLCert = (st_cert_t*)dictator_malloc(thread_seq,sizeof(st_cert_t));
-				memset(a_ssl_stream->stSSLCert, 0, sizeof(a_ssl_stream->stSSLCert));
-			}
+				//memset(a_ssl_stream->stSSLCert, 0, sizeof(a_ssl_stream->stSSLCert));
+			}			
+			memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t));	
 			a_ssl_stream->stSSLCert->totallen = BtoL3BytesNum((char *)(pcCurSslData + 4));
 			if(a_ssl_stream->stSSLCert->totallen<0)  return SSL_RETURN_DROPME;
 
