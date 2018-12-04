@@ -1089,11 +1089,11 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
 
 			snprintf(a_ssl_stream->stSSLCert->SSLSub,
-								 sizeof(a_ssl_stream->stSSLCert->SSLSub),
-								 "%s;%s;%s",
-								 a_ssl_stream->stSSLCert->SSLSubCN,
-								 a_ssl_stream->stSSLCert->SSLSubO,
-								 a_ssl_stream->stSSLCert->SSLSubC);
+					 sizeof(a_ssl_stream->stSSLCert->SSLSub),
+					 "%s;%s;%s",
+					 a_ssl_stream->stSSLCert->SSLSubCN,
+					 a_ssl_stream->stSSLCert->SSLSubO,
+					 a_ssl_stream->stSSLCert->SSLSubC);
 		}
 		
 		/*validity*/
