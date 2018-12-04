@@ -1038,7 +1038,7 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 	//return SSL_RETURN_NORM;
 	int data = 0;
 	
-	X509 * x509_handle = d2i_X509(NULL, (unsigned char const **)&pcCert, iLen);
+	X509 *x509_handle = d2i_X509(NULL, (unsigned char const **)&pcCert, iLen);
 	if (x509_handle == NULL) 
 	{
 		return SSL_RETURN_NORM;
@@ -1088,7 +1088,12 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
 			X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
 
-			memcpy(a_ssl_stream->stSSLCert->SSLSub, x509_handle->name,strlen(x509_handle->name));						   
+			snprintf(a_ssl_stream->stSSLCert->SSLSub,
+								 sizeof(a_ssl_stream->stSSLCert->SSLSub),
+								 "%s;%s;%s",
+								 a_ssl_stream->stSSLCert->SSLSubCN,
+								 a_ssl_stream->stSSLCert->SSLSubO,
+								 a_ssl_stream->stSSLCert->SSLSubC);
 		}
 		
 		/*validity*/
