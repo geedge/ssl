@@ -19,7 +19,7 @@
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20181204 = 0;
+int SSL_VERSION_1_20181206 = 0;
 
 void ssl_history()
 {
@@ -64,6 +64,8 @@ void ssl_history()
 //2018-11-08 V0.2 multi-san
 //2018-11-29 V0.2 san dictator_malloc
 //2018-12-04 V0.2 openssl parse certificate bug
+//2018-12-06 V0.2 certificate maxnum
+
 
 
 //to do 

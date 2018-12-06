@@ -27,11 +27,13 @@
 //debug
 #define PRINTF_CERTIFICATE		0
 
+#define CERT_VER_MAXNUM			3
 const stValueString_t g_astCertVersions[] =
 {
     {   0, "v1" },
     {   1, "v2" },
-    {   2, "v3" },
+    {   2, "v3" },    
+    {   3, "v4" },
     {   0, NULL },
 };
 
@@ -1047,7 +1049,8 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 	if(NULL!=x509_handle->cert_info)
 	{
 		/*version*/
-		int ver = X509_get_version(x509_handle);		
+		int ver = X509_get_version(x509_handle);
+		if(ver>CERT_VER_MAXNUM) return SSL_RETURN_NORM;
 		memcpy(a_ssl_stream->stSSLCert->SSLVersion, 
 				g_astCertVersions[ver].pcString, 
 				1 + strlen((const char *)g_astCertVersions[ver].pcString));
