@@ -25,7 +25,7 @@
 #include "openssl/x509v3.h"
 
 //debug
-#define PRINTF_CERTIFICATE		0
+#define PRINTF_CERTIFICATE		1
 
 #define CERT_VER_MAXNUM			3
 const stValueString_t g_astCertVersions[] =
@@ -307,11 +307,10 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 			dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubAltName);
 			a_ssl_stream->stSSLCert->SSLSubAltName = NULL;
 		}
-		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t)); 
 #if PRINTF_CERTIFICATE
-		cert_log(); 		
+		cert_log(a_ssl_stream); 		
 #endif 
-		
+		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t)); 		
 		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;      
         pcCurSslCertificateData += a_ssl_stream->stSSLCert->certlen;
         iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 			      
@@ -1050,7 +1049,7 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 	{
 		/*version*/
 		int ver = X509_get_version(x509_handle);
-		if(ver>CERT_VER_MAXNUM) return SSL_RETURN_NORM;
+		if(ver>CERT_VER_MAXNUM) goto cert_return;
 		memcpy(a_ssl_stream->stSSLCert->SSLVersion, 
 				g_astCertVersions[ver].pcString, 
 				1 + strlen((const char *)g_astCertVersions[ver].pcString));
@@ -1107,7 +1106,7 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 
 		/*subject bak*/	
 		GENERAL_NAMES* subjectAltNames = (GENERAL_NAMES*)X509_get_ext_d2i(x509_handle, NID_subject_alt_name, NULL, NULL);  
-		if(!subjectAltNames) return SSL_RETURN_NORM;
+		if(!subjectAltNames) goto cert_return;
 		int cnt = sk_GENERAL_NAME_num(subjectAltNames);
 		char* san = NULL;
 		ASN1_STRING *san_name;
@@ -1122,7 +1121,7 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			for (int i = 0; i < cnt; i++)
 			{       
 				generalName = sk_GENERAL_NAME_value(subjectAltNames, i);
-				if(!generalName) return SSL_RETURN_NORM;
+				if(!generalName) goto cert_return;
 				if(GEN_DNS == generalName->type)
 				{
 					san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
@@ -1143,6 +1142,12 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			GENERAL_NAMES_free(subjectAltNames);
 		}
 	}	
+
+cert_return:
+	if (x509_handle != NULL) 
+	{
+		X509_free(x509_handle);
+	}
 	return SSL_RETURN_NORM;
 }
 
