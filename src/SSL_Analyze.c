@@ -65,7 +65,7 @@ void ssl_history()
 //2018-11-29 V0.2 san dictator_malloc
 //2018-12-04 V0.2 openssl parse certificate bug
 //2018-12-07 V0.2 certificate maxnum; memcheck
-//2019-01-28 V0.2 bug update: memset in cert
+//2019-01-28 V0.2 1. bug update: memset in cert 2. ssl cert_chain:FF FF
 
 
 

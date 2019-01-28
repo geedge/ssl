@@ -81,7 +81,7 @@ int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint
 			break;
 		}
 		cur_certlen = BtoL3BytesNum(unproc_cert);
-		if(cur_certlen+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
+		if(((int)cur_certlen <0) || cur_certlen+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
 		{
 			break;
 		}
@@ -160,7 +160,7 @@ int ssl_read_all_cert(const char* conj_cert_buf, uint32_t conj_buflen, cert_chai
 			break;
 		}
 		cur_certlen = BtoL3BytesNum(unproc_cert);
-		if(cur_certlen+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
+		if((int)cur_certlen <0 || cur_certlen+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
 		{
 			break;
 		}
