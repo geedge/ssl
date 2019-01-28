@@ -19,7 +19,7 @@
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20181207 = 0;
+int SSL_VERSION_1_20190128 = 0;
 
 void ssl_history()
 {
@@ -65,6 +65,8 @@ void ssl_history()
 //2018-11-29 V0.2 san dictator_malloc
 //2018-12-04 V0.2 openssl parse certificate bug
 //2018-12-07 V0.2 certificate maxnum; memcheck
+//2019-01-28 V0.2 bug update: memset in cert
+
 
 
 
@@ -117,6 +119,7 @@ int SSL_INIT(void)
 	
 	if(0!=ssl_readconf(g_ssl_prog_para.ssl_conf_filename))
 		return -1;	
+
 	return 0;
 }/*SSL_INIT*/
 

@@ -25,7 +25,7 @@
 #include "openssl/x509v3.h"
 
 //debug
-#define PRINTF_CERTIFICATE		1
+#define PRINTF_CERTIFICATE		0
 
 #define CERT_VER_MAXNUM			3
 const stValueString_t g_astCertVersions[] =
@@ -310,10 +310,11 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 #if PRINTF_CERTIFICATE
 		cert_log(a_ssl_stream); 		
 #endif 
+        pcCurSslCertificateData += a_ssl_stream->stSSLCert->certlen;
+        iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 	
+		//20190128
 		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t)); 		
 		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;      
-        pcCurSslCertificateData += a_ssl_stream->stSSLCert->certlen;
-        iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 			      
     }
 	return SSL_RETURN_NORM;
 }
