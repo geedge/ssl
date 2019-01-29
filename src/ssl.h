@@ -218,7 +218,6 @@ int ssl_read_all_cert(const char* conj_cert_buf, uint32_t conj_buflen, cert_chai
 int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint8_t cert_type, char** cert, uint32_t* cert_len);
 
 const char* ssl_get_suite(st_suites_t* ciphersuits);
-const char* ssl_get_suite(st_suites_t* ciphersuits);
 
 
 #ifdef __cplusplus
