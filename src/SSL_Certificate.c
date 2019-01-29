@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <assert.h>
 #include "SSL_Analyze.h"
 #include "ssl.h"
 #include "SSL_Message.h"
@@ -240,20 +241,13 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 	cert_chain_t cert_unit[CERT_MAXNUM];
 	int	cert_num = 0;
 	int cert_cnt = ssl_read_all_cert(pcCurSslCertificateData, iUnAnaCertLen, cert_unit, CERT_MAXNUM);
-    while (iUnAnaCertLen > 0)
-    {
-        a_ssl_stream->stSSLCert->certlen = BtoL3BytesNum(pcCurSslCertificateData);        
-         if (a_ssl_stream->stSSLCert->certlen + SSL_CERTIFICATE_HDRLEN > iUnAnaCertLen)
-        {
-        	/**packet trunked is impossible**/
-        	break;
-        }
-        pcCurSslCertificateData += SSL_CERTIFICATE_HDRLEN;
-        iUnAnaCertLen -= SSL_CERTIFICATE_HDRLEN;
-        return_val = fn_pGetSSLInfo(pcCurSslCertificateData, a_ssl_stream->stSSLCert->certlen, a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-        if( SSL_RETURN_NORM != return_val)   	return return_val;
-
-        a_ssl_stream->output_region_mask = SSL_CERTIFICATE_DETAIL_MASK;	
+    	
+	for(int i=0;i<cert_cnt;i++)
+	{
+		return_val = fn_pGetSSLInfo(cert_unit[i].cert, cert_unit[i].cert_len, a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
+        if( SSL_RETURN_NORM != return_val)      return return_val; 
+		
+		a_ssl_stream->output_region_mask = SSL_CERTIFICATE_DETAIL_MASK;	
 		a_ssl_stream->p_output_buffer->p_data = pcCurSslCertificateData;
 		a_ssl_stream->p_output_buffer->data_size = a_ssl_stream->stSSLCert->certlen;
 		switch(cert_num)
@@ -310,12 +304,9 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 #if PRINTF_CERTIFICATE
 		cert_log(a_ssl_stream); 		
 #endif 
-        pcCurSslCertificateData += a_ssl_stream->stSSLCert->certlen;
-        iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 	
-		//20190128
 		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t)); 		
-		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;      
-    }
+		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;  	
+	}
 	return SSL_RETURN_NORM;
 }
 
