@@ -3,7 +3,6 @@
 #include "ssl.h"
 #include "SSL_Message.h"
 #include "SSL_Proc.h"
-#include "SSL_Common.h"
 #include "SSL_Certificate.h"
 
 extern ssl_prog_runtime_parameter_t 	g_ssl_prog_para;

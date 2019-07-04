@@ -241,8 +241,9 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 	cert_chain_t cert_unit[CERT_MAXNUM];
 	int	cert_num = 0;
 	int cert_cnt = ssl_read_all_cert(pcCurSslCertificateData, iUnAnaCertLen, cert_unit, CERT_MAXNUM);
-    	
-	for(int i=0;i<cert_cnt;i++)
+
+	int i=0;
+	for(i=0;i<cert_cnt;i++)
 	{
 		return_val = fn_pGetSSLInfo(cert_unit[i].cert, cert_unit[i].cert_len, a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
         if( SSL_RETURN_NORM != return_val)      return return_val; 
@@ -1110,7 +1111,8 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			a_ssl_stream->stSSLCert->SSLSubAltName->san_array = (san_t*)dictator_malloc(thread_seq, cnt*sizeof(san_t));
 			memset(a_ssl_stream->stSSLCert->SSLSubAltName->san_array,0,cnt*sizeof(san_t));
 			a_ssl_stream->stSSLCert->SSLSubAltName->count = 0;
-			for (int i = 0; i < cnt; i++)
+			int i=0;
+			for (i = 0; i < cnt; i++)
 			{       
 				generalName = sk_GENERAL_NAME_value(subjectAltNames, i);
 				if(!generalName) goto cert_return;

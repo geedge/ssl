@@ -15,7 +15,6 @@
 #include "SSL_Message.h"
 #include "ssl.h"
 #include "SSL_Proc.h"
-#include "SSL_Common.h"
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 

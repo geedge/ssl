@@ -13,7 +13,6 @@
 #include "SSL_Message.h"
 #include "ssl.h"
 #include "SSL_Proc.h"
-#include "SSL_Common.h"
 
 //debug
 #define PRINTF_CLIENT_HELLO		0
@@ -77,7 +76,8 @@ UCHAR ssl_doWithVersion(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 	if(!(g_ssl_prog_para.ssl_interested_region_flag&SSL_VERSION))	return return_val;
 	
 	int find_index = -1;
-	for(unsigned int i=0;pastSslVersions[i].uiValue!=0;i++)
+	unsigned int i=0;
+	for(i=0;pastSslVersions[i].uiValue!=0;i++)
 	{
 		if(pastSslVersions[i].uiValue==(*a_ssl_stream)->uiSslVersion)
 		{
