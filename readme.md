@@ -7,3 +7,6 @@ ssl.so是sapp平台解析层插件。
 参见wiki链接
 https://git.mesalab.cn/MESA_Platform/ssl/wikis/SSL%E4%B8%9A%E5%8A%A1%E5%B1%82%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97
 
+业务层demo:
+参见project ssl_service_test project
+
