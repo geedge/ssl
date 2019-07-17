@@ -9,7 +9,6 @@ include(Version)
 
 set(CMAKE_MACOSX_RPATH 0)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -Wall)
-set(CMAKE_INSTALL_PREFIX /opt/MESA)
 
 #for ASAN
 option(ENABLE_SANITIZE_ADDRESS "Enable AddressSanitizer" FALSE)
@@ -47,9 +46,6 @@ if(DEFINED MESA_SHARED_INSTALL_DIR)
 else()
 	set_target_properties(ssl PROPERTIES OUTPUT_NAME ${lib_name})
 endif()
-
-
-set(CMAKE_INSTALL_PREFIX /home/mesasoft/sapp)
 
 install(TARGETS ssl LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name})
 install(FILES bin/${lib_name}.inf DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name})
