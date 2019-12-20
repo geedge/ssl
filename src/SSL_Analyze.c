@@ -21,7 +21,6 @@
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20191220 = 0;
 
 void ssl_history()
 {
