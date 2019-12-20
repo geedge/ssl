@@ -15,10 +15,13 @@
 #include "SSL_Message.h"
 #include "ssl.h"
 #include "SSL_Proc.h"
+#include "field_stat2.h"
+#include "MESA_prof_load.h"
+
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20190128 = 0;
+int SSL_VERSION_1_20191220 = 0;
 
 void ssl_history()
 {
@@ -65,7 +68,7 @@ void ssl_history()
 //2018-12-04 V0.2 openssl parse certificate bug
 //2018-12-07 V0.2 certificate maxnum; memcheck
 //2019-01-28 V0.2 1. bug update: memset in cert 2. ssl cert_chain:FF FF
-
+//2019-12-20 V0.2 add info statistics
 
 
 
@@ -111,14 +114,50 @@ int ssl_readconf(const char* filename)
 	return 0;
 }
 
+int ssl_readMainConf(const char* filename)
+{
+	char 	http_log_filename[256];	
+	
+	
+	MESA_load_profile_int_def(filename, "FUNCTION", "stat_screen_print", &g_ssl_prog_para.stat_screen_print_trigger,0);
+	MESA_load_profile_int_def(filename, "FUNCTION", "stat_cycle", &g_ssl_prog_para.stat_cycle,0);
+	MESA_load_profile_string_def(filename, "FUNCTION", "stat_file", g_ssl_prog_para.stat_filename, sizeof(g_ssl_prog_para.stat_filename),"./log/ssl/ssl_stat.log");
+	MESA_load_profile_short_def(filename, "FUNCTION", "switch_no_biz", (short*)&g_ssl_prog_para.ssl_switch_no_biz,0);
+
+	return 0;
+}
+
 int SSL_INIT(void)
 {
+	int 	value = 0;		
 	memset(&g_ssl_prog_para,0,sizeof(ssl_prog_runtime_parameter_t));	
 	strcat(g_ssl_prog_para.ssl_conf_filename, "./conf/ssl/ssl.conf");
 	
 	if(0!=ssl_readconf(g_ssl_prog_para.ssl_conf_filename))
 		return -1;	
 
+	ssl_readMainConf("./conf/ssl/ssl_main.conf");	
+
+	
+	if(g_ssl_prog_para.stat_cycle)
+	{	
+		g_ssl_prog_para.stat_handler = FS_create_handle();
+		FS_set_para(g_ssl_prog_para.stat_handler, OUTPUT_DEVICE, g_ssl_prog_para.stat_filename, strlen(g_ssl_prog_para.stat_filename)+1);
+		value = 1;//flush by date
+		FS_set_para(g_ssl_prog_para.stat_handler, FLUSH_BY_DATE, &value, sizeof(value));	
+		value = 2;//append
+		FS_set_para(g_ssl_prog_para.stat_handler, PRINT_MODE, &value, sizeof(value));	
+		FS_set_para(g_ssl_prog_para.stat_handler, STAT_CYCLE, &g_ssl_prog_para.stat_cycle, sizeof(g_ssl_prog_para.stat_cycle));
+		value = (g_ssl_prog_para.stat_cycle!=0) ? 1 : 0;
+		FS_set_para(g_ssl_prog_para.stat_handler, PRINT_TRIGGER, &value, sizeof(value));
+		value = 1;
+		FS_set_para(g_ssl_prog_para.stat_handler, CREATE_THREAD, &value, sizeof(value));	
+		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_pkts");
+		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_s2c_pkts");
+		g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_bytes");
+		g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_s2c_bytes");	
+		FS_start(g_ssl_prog_para.stat_handler);
+	}
 	return 0;
 }/*SSL_INIT*/
 
@@ -392,13 +431,16 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 	UCHAR return_val=0;
 	ssl_stream *a_ssl_stream = NULL;
 
-    switch(ssl_doWithInsterestedRegion(a_tcp))
-    {
-    case APP_STATE_DROPME:
-    	return APP_STATE_DROPME;   
-    default:
-    	break;
-    }
+	if(!g_ssl_prog_para.ssl_switch_no_biz)
+	{
+	    switch(ssl_doWithInsterestedRegion(a_tcp))
+	    {
+	    case APP_STATE_DROPME:
+	    	return APP_STATE_DROPME;   
+	    default:
+	    	break;
+	    }
+	}
 
     switch(a_tcp->opstate)
     {
@@ -420,6 +462,18 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
         if(a_ssl_stream!=NULL)
 		{
 			a_ssl_stream->over_flag = SSL_TRUE;
+		}
+		if(g_ssl_prog_para.stat_cycle && a_ssl_stream->uiSslVersion!=UNKNOWN_VERSION)
+		{
+			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S], a_tcp->ptcpdetail->serverpktnum);
+			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C], a_tcp->ptcpdetail->clientpktnum);
+			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S], a_tcp->ptcpdetail->serverbytes);
+			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C], a_tcp->ptcpdetail->clientbytes);
+			
+			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S]);
+			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C]);
+			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S]);
+			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
 		}
     	return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);    	
     	if(NULL!=a_ssl_stream)
