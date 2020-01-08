@@ -65,8 +65,11 @@ typedef struct ssl_prog_runtime_parameter_t
 	int 				ssl_switch_no_biz;
 	
 	int					stat_field[SSL_MAX_STAT_FIELD];	
+	int                 stat_dst_port;
 	uint64_t			stat_value[SSL_MAX_STAT_FIELD];	
 	char 				stat_filename[256];
+	char                stat_dst_ip[64];
+	char                stat_appname[16];
 }ssl_prog_runtime_parameter_t;
 
 

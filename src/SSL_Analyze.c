@@ -124,6 +124,10 @@ int ssl_readMainConf(const char* filename)
 	MESA_load_profile_string_def(filename, "FUNCTION", "stat_file", g_ssl_prog_para.stat_filename, sizeof(g_ssl_prog_para.stat_filename),"./log/ssl/ssl_stat.log");
 	MESA_load_profile_short_def(filename, "FUNCTION", "switch_no_biz", (short*)&g_ssl_prog_para.ssl_switch_no_biz,0);
 
+	MESA_load_profile_string_def(filename, "FUNCTION", "STAT_FIELD_APPNAME", g_ssl_prog_para.stat_appname, 16, "MAIL");
+	MESA_load_profile_string_def(filename, "FUNCTION", "STAT_FIELD_DST_IP", g_ssl_prog_para.stat_dst_ip, 64, "127.0.0.1");
+	MESA_load_profile_int_def(filename, "FUNCTION", "STAT_FIELD_DST_PORT", &g_ssl_prog_para.stat_dst_port, 8125);
+
 	return 0;
 }
 
@@ -152,6 +156,9 @@ int SSL_INIT(void)
 		FS_set_para(g_ssl_prog_para.stat_handler, PRINT_TRIGGER, &value, sizeof(value));
 		value = 1;
 		FS_set_para(g_ssl_prog_para.stat_handler, CREATE_THREAD, &value, sizeof(value));	
+		FS_set_para(g_ssl_prog_para.stat_handler, APP_NAME, g_ssl_prog_para.stat_appname, strlen(g_ssl_prog_para.stat_appname)+1);
+		FS_set_para(g_ssl_prog_para.stat_handler, STATS_SERVER_IP, g_ssl_prog_para.stat_dst_ip, strlen(g_ssl_prog_para.stat_dst_ip)+1);
+		FS_set_para(g_ssl_prog_para.stat_handler, STATS_SERVER_PORT, &g_ssl_prog_para.stat_dst_port, sizeof(g_ssl_prog_para.stat_dst_port));
 		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_pkts");
 		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_s2c_pkts");
 		g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_bytes");
