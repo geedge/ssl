@@ -21,7 +21,7 @@
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20191220 = 0;
+int SSL_VERSION_1_20200109 = 0;
 
 void ssl_history()
 {
@@ -69,8 +69,7 @@ void ssl_history()
 //2018-12-07 V0.2 certificate maxnum; memcheck
 //2019-01-28 V0.2 1. bug update: memset in cert 2. ssl cert_chain:FF FF
 //2019-12-20 V0.2 add info statistics
-
-
+//2020-01-09 V0.2 add stream tag
 
 //to do 
 //certificate ANSL 
@@ -124,11 +123,35 @@ int ssl_readMainConf(const char* filename)
 	MESA_load_profile_string_def(filename, "FUNCTION", "stat_file", g_ssl_prog_para.stat_filename, sizeof(g_ssl_prog_para.stat_filename),"./log/ssl/ssl_stat.log");
 	MESA_load_profile_short_def(filename, "FUNCTION", "switch_no_biz", (short*)&g_ssl_prog_para.ssl_switch_no_biz,0);
 
-	MESA_load_profile_string_def(filename, "FUNCTION", "STAT_FIELD_APPNAME", g_ssl_prog_para.stat_appname, 16, "MAIL");
+	MESA_load_profile_string_def(filename, "FUNCTION", "STAT_FIELD_APPNAME", g_ssl_prog_para.stat_appname, 16, "SSL");
 	MESA_load_profile_string_def(filename, "FUNCTION", "STAT_FIELD_DST_IP", g_ssl_prog_para.stat_dst_ip, 64, "127.0.0.1");
 	MESA_load_profile_int_def(filename, "FUNCTION", "STAT_FIELD_DST_PORT", &g_ssl_prog_para.stat_dst_port, 8125);
 
 	return 0;
+}
+
+int ssl_add_proto_tag(int projetc_id, struct streaminfo *a_stream, const char* value, int len)
+{
+	if(projetc_id < 0)return -1;    
+	struct ssl_proto_tag_t* proto_tag = (struct ssl_proto_tag_t*)project_req_get_struct(a_stream,projetc_id);   
+	if(proto_tag == NULL)   
+	{        
+		proto_tag = (struct ssl_proto_tag_t *)calloc(sizeof(struct ssl_proto_tag_t), 1);        
+		if(0 != project_req_add_struct(a_stream, projetc_id, proto_tag))        
+		{            
+			free(proto_tag);            
+			return -1;        
+		}    
+	}    
+	memcpy(proto_tag->buf, value, len);  
+	proto_tag->buf[len]='\0';
+	return 0;
+}
+
+void ssl_proto_tag_free(int thread_seq, void *value)
+{    
+	free(value);    
+	return;
 }
 
 int SSL_INIT(void)
@@ -140,7 +163,10 @@ int SSL_INIT(void)
 	if(0!=ssl_readconf(g_ssl_prog_para.ssl_conf_filename))
 		return -1;	
 
-	ssl_readMainConf("./conf/ssl/ssl_main.conf");	
+	ssl_readMainConf("./conf/ssl/ssl_main.conf");
+
+	/*MESA_proto*/
+	g_ssl_prog_para.proto_tag_id  = project_producer_register("MESA_PROTO","struct",ssl_proto_tag_free);
 
 	
 	if(g_ssl_prog_para.stat_cycle)
@@ -470,24 +496,29 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 		{
 			a_ssl_stream->over_flag = SSL_TRUE;
 		}
-		if(g_ssl_prog_para.stat_cycle && a_ssl_stream->uiSslVersion!=UNKNOWN_VERSION)
-		{
-			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S], a_tcp->ptcpdetail->serverpktnum);
-			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C], a_tcp->ptcpdetail->clientpktnum);
-			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S], a_tcp->ptcpdetail->serverbytes);
-			atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C], a_tcp->ptcpdetail->clientbytes);
-			
-			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S]);
-			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C]);
-			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S]);
-			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
+		if(a_ssl_stream->uiSslVersion!=UNKNOWN_VERSION)
+		{			
+			ssl_add_proto_tag(g_ssl_prog_para.proto_tag_id, a_tcp, "SSL", strlen("SSL"));
+			if(g_ssl_prog_para.stat_cycle)
+			{			
+				atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S], a_tcp->ptcpdetail->serverpktnum);
+				atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C], a_tcp->ptcpdetail->clientpktnum);
+				atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S], a_tcp->ptcpdetail->serverbytes);
+				atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C], a_tcp->ptcpdetail->clientbytes);
+				
+				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S]);
+				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C]);
+				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S]);
+				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
+			}
 		}
     	return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);    	
     	if(NULL!=a_ssl_stream)
     	{
     		ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
     		*pme = NULL;
-    	}    	
+    	}  				
+		
     	return APP_STATE_DROPME;
     }
     return APP_STATE_GIVEME;

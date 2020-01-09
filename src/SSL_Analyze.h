@@ -70,8 +70,14 @@ typedef struct ssl_prog_runtime_parameter_t
 	char 				stat_filename[256];
 	char                stat_dst_ip[64];
 	char                stat_appname[16];
+	
+	int					proto_tag_id ;
 }ssl_prog_runtime_parameter_t;
 
+struct ssl_proto_tag_t
+{    
+	char buf[8];
+};
 
 #ifdef __cplusplus
 extern "C" {
