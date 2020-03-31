@@ -212,7 +212,7 @@ void SSL_PROT_FUNSTAT(unsigned long long protflag)
 	return;
 }/*PROT_FUNSTAT*/
 
-unsigned long long ssl_getRegionID(char *string, int str_len,const char g_string[MAX_REGION_NUM][REGION_NAME_LEN])
+unsigned long long ssl_getRegionID(char *string, int str_len, char g_string[MAX_REGION_NUM][REGION_NAME_LEN])
 {
 	unsigned long long i=0;
 	for(i=0;i<g_ssl_prog_para.ssl_region_cnt;i++)
