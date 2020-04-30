@@ -48,10 +48,11 @@ else()
 	set_target_properties(ssl PROPERTIES OUTPUT_NAME ${lib_name})
 endif()
 
-install(TARGETS ssl LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name})
-install(FILES bin/${lib_name}.inf DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name})
-install(FILES bin/${lib_name}/${lib_name}.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/conf/${lib_name}/)
-install(FILES src/${lib_name}.h DESTINATION /opt/MESA/include/MESA COMPONENT devel)
+set(CMAKE_INSTALL_PREFIX /home/mesasoft/sapp_run/)
+install(TARGETS ssl LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name} COMPONENT LIBRARY)
+install(FILES bin/${lib_name}.inf DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name} COMPONENT PROFILE)
+install(FILES bin/${lib_name}/${lib_name}.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/conf/${lib_name}/ COMPONENT PROFILE)
+install(FILES src/${lib_name}.h DESTINATION /opt/MESA/include/MESA COMPONENT HEADER)
 
 file(GLOB DEMO
     "test/src/*.c"
