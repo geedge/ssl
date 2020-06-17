@@ -21,7 +21,7 @@
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20200615 = 0;
+int SSL_VERSION_1_20200617 = 0;
 
 void ssl_history()
 {
@@ -71,6 +71,8 @@ void ssl_history()
 //2019-12-20 V0.2 add info statistics
 //2020-01-09 V0.2 add stream tag
 //2020-06-15 V0.2 memset buf 
+//2020-06-17 V0.2 increase MAX_DATA_BUFFER 40960 
+
 
 //to do 
 //certificate ANSL 
