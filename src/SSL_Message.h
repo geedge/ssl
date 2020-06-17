@@ -7,7 +7,7 @@
 
 #define MIN(a, b)                    ((a) <= (b) ? (a):(b))
 
-#define MAX_DATA_BUFFER  			40960
+#define MAX_DATA_BUFFER  			10240
 
 
 #define SSL_HEADER_LEN	5+1	//use the hand_shake first bytes

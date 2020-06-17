@@ -720,9 +720,9 @@ UCHAR ssl_analyseStreamData(char *pcSslData, int iDataLen, int *res, ssl_stream 
               	iCurAllMsgLen = a_ssl_stream->uiAllMsgLen ;				
             	iCurMsgLen = a_ssl_stream->uiAllMsgLen < iUnAnalyseLen ? a_ssl_stream->uiAllMsgLen : iUnAnalyseLen;
             	a_ssl_stream->uiMsgState = SSL_HANDSHAKE_NOTRUNK;	
-				static int count;
-				count++;
-				printf("%d\t%d\t%lld\n",count, a_ssl_stream->uiAllMsgLen, g_SysInputInfo[0][0]);							
+				//static int count;
+				//count++;
+				//printf("%d\t%d\t%lld\n",count, a_ssl_stream->uiAllMsgLen, g_SysInputInfo[0][0]);							
 				break;
 
 			case CHANGE_CIPHER_SEP:
