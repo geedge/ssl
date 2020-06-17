@@ -715,13 +715,14 @@ UCHAR ssl_analyseStreamData(char *pcSslData, int iDataLen, int *res, ssl_stream 
             	a_ssl_stream->ucContType = APPLICATION_DATA;
 				a_ssl_stream->is_ssl_stream = SSL_TRUE;
             	a_ssl_stream->uiAllMsgLen = htons(pstSSLRecordHdr->usTotalLen);
-              	iCurAllMsgLen = a_ssl_stream->uiAllMsgLen ;
+				pcCurSslData += SSL_RECORD_HDRLEN;
 				iUnAnalyseLen -= SSL_RECORD_HDRLEN;
+              	iCurAllMsgLen = a_ssl_stream->uiAllMsgLen ;				
             	iCurMsgLen = a_ssl_stream->uiAllMsgLen < iUnAnalyseLen ? a_ssl_stream->uiAllMsgLen : iUnAnalyseLen;
             	a_ssl_stream->uiMsgState = SSL_HANDSHAKE_NOTRUNK;	
-				//static int count;
-				//count++;
-				//printf("%d\t%d\t%lld\n",count, a_ssl_stream->uiAllMsgLen, g_SysInputInfo[0][0]);							
+				static int count;
+				count++;
+				printf("%d\t%d\t%lld\n",count, a_ssl_stream->uiAllMsgLen, g_SysInputInfo[0][0]);							
 				break;
 
 			case CHANGE_CIPHER_SEP:
@@ -729,6 +730,7 @@ UCHAR ssl_analyseStreamData(char *pcSslData, int iDataLen, int *res, ssl_stream 
 				a_ssl_stream->is_ssl_stream = SSL_TRUE;
 				a_ssl_stream->uiAllMsgLen = htons(pstSSLRecordHdr->usTotalLen);
               	iCurAllMsgLen = a_ssl_stream->uiAllMsgLen ;
+				pcCurSslData += SSL_RECORD_HDRLEN;
 				iUnAnalyseLen -= SSL_RECORD_HDRLEN;
             	iCurMsgLen = a_ssl_stream->uiAllMsgLen < iUnAnalyseLen ? a_ssl_stream->uiAllMsgLen : iUnAnalyseLen;
             	a_ssl_stream->uiMsgState = SSL_HANDSHAKE_NOTRUNK;            	
@@ -740,6 +742,7 @@ UCHAR ssl_analyseStreamData(char *pcSslData, int iDataLen, int *res, ssl_stream 
 				a_ssl_stream->is_ssl_stream = SSL_TRUE;
 				a_ssl_stream->uiAllMsgLen = htons(pstSSLRecordHdr->usTotalLen);
               	iCurAllMsgLen = a_ssl_stream->uiAllMsgLen ;
+				pcCurSslData += SSL_RECORD_HDRLEN;
 				iUnAnalyseLen -= SSL_RECORD_HDRLEN;
             	iCurMsgLen = a_ssl_stream->uiAllMsgLen < iUnAnalyseLen ? a_ssl_stream->uiAllMsgLen : iUnAnalyseLen;
             	a_ssl_stream->uiMsgState = SSL_HANDSHAKE_NOTRUNK;            	
@@ -767,7 +770,7 @@ UCHAR ssl_analyseStreamData(char *pcSslData, int iDataLen, int *res, ssl_stream 
 		{
 			case APPLICATION_DATA:				
 				/*不缓冲数据，实时处理*/
-				return_val = ssl_analyseAppData((char *)pcCurSslData + SSL_RECORD_HDRLEN, iCurAllMsgLen, iUnAnalyseLen, res, a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
+				return_val = ssl_analyseAppData((char *)pcCurSslData, iCurAllMsgLen, iUnAnalyseLen, res, a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
 				/*the data is not enough*/
 				if(*res < iCurAllMsgLen)
 				{
