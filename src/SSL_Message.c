@@ -916,6 +916,7 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void** pme, int thread_seq, vo
     	if(0==a_ssl_stream->uiMaxBuffLen)
     	{
     		a_ssl_stream->pcSslBuffer = (char*)dictator_malloc(thread_seq, MAX_DATA_BUFFER);
+    		memset(a_ssl_stream->pcSslBuffer,0,sizeof(a_ssl_stream->pcSslBuffer));
 			a_ssl_stream->uiMaxBuffLen = MAX_DATA_BUFFER;
 		}
     	fn_vMemCpy(a_ssl_stream->pcSslBuffer, (int)a_ssl_stream->uiMaxBuffLen, pcSslData + iRet, (int)(iSslDateLen - iRet));
