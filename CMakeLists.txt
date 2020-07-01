@@ -49,6 +49,10 @@ else()
 endif()
 
 set(CMAKE_INSTALL_PREFIX /home/mesasoft/sapp_run/)
+
+set(CPACK_RPM_LIBRARY_USER_FILELIST "%config(noreplace) ${CMAKE_INSTALL_PREFIX}/plug/protocol/ssl/ssl.inf"
+                                         "%config(noreplace) ${CMAKE_INSTALL_PREFIX}/conf/ssl/ssl.conf")
+
 install(TARGETS ssl LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name} COMPONENT LIBRARY)
 install(FILES bin/${lib_name}.inf DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name} COMPONENT PROFILE)
 install(FILES bin/${lib_name}/${lib_name}.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/conf/${lib_name}/ COMPONENT PROFILE)
