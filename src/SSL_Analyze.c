@@ -170,6 +170,7 @@ int SSL_INIT(void)
 
 	/*MESA_proto*/
 	g_ssl_prog_para.proto_tag_id  = project_producer_register("MESA_PROTO","struct",ssl_proto_tag_free);
+	ssl_ja3_init();
 
 	
 	if(g_ssl_prog_para.stat_cycle)
