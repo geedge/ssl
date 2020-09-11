@@ -219,6 +219,16 @@ int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint
 
 const char* ssl_get_suite(st_suites_t* ciphersuits);
 
+struct _ssl_ja3_info_t
+{
+	int sni_len;
+	int fp_len;
+	char *sni;
+	char *fp;
+};
+
+int ssl_ja3_init(void);
+struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq);
 
 #ifdef __cplusplus
 }
