@@ -640,12 +640,22 @@ struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsig
 			memcpy(ja3_info->sni, sni_buff, ja3_info->sni_len);
 			ja3_info->sni[ja3_info->sni_len]='\0';
 		}
+		else
+		{
+			ja3_info->sni=NULL;
+			ja3_info->sni_len=0;
+		}
 
 		if(strlen(ja3_fp)>0 && strlen(ja3_fp)<sizeof(ja3_fp))
 		{
 			ja3_info->fp=(char *)dictator_malloc(thread_seq, MD5_DIGEST_LENGTH*2+1);
 			ja3_info->fp_len=ja3_md5sum(ja3_fp, strlen(ja3_fp), ja3_info->fp, MD5_DIGEST_LENGTH*2+1);
 			ja3_info->fp[ja3_info->fp_len]='\0';
+		}
+		else
+		{
+			ja3_info->fp=NULL;
+			ja3_info->fp_len=0;
 		}
 		
 		project_req_add_struct(stream, g_ssl_ja3_fingerprint_label_id, (void *)ja3_info);
