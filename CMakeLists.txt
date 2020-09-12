@@ -33,7 +33,8 @@ include_directories(./src/inc/)
 include_directories(./src/)
 
 file(GLOB SRC
-    "src/*.c"    
+    "src/*.c"
+    "src/*.cpp"
 )
 
 set(DNS_DEPEND_DYN_LIB MESA_handle_logger MESA_field_stat2 MESA_prof_load)
