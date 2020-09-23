@@ -426,7 +426,7 @@ static int ssl_generate_ja3_fingerprint(const unsigned char *data, int len, char
     BSB ecja3bsb;
 
     BSB_INIT(sslbsb, data, len);
-    BSB_INIT(ja3bsb, ja3_fp, sizeof(ja3_fp));
+    BSB_INIT(ja3bsb, ja3_fp, ja3_fp_len);
     BSB_INIT(ecja3bsb, ecja3, sizeof(ecja3));
     BSB_INIT(ecfja3bsb, ecfja3, sizeof(ecfja3));
     BSB_INIT(eja3bsb, eja3, sizeof(eja3));
@@ -585,13 +585,10 @@ static int ssl_generate_ja3_fingerprint(const unsigned char *data, int len, char
         }
         BSB_IMPORT_skip(sslbsb, ssllen + 5);
 
-#if 0
         if (BSB_LENGTH(ja3bsb) > 0 && BSB_NOT_ERROR(ja3bsb) && BSB_NOT_ERROR(ecja3bsb) && BSB_NOT_ERROR(eja3bsb) && BSB_NOT_ERROR(ecfja3bsb))
         {
             BSB_EXPORT_sprintf(ja3bsb, "%.*s,%.*s,%.*s", (int)BSB_LENGTH(eja3bsb), eja3, (int)BSB_LENGTH(ecja3bsb), ecja3, (int)BSB_LENGTH(ecfja3bsb), ecfja3);
-            printf("JA3: %s\n", ja3_fp);
         }
-#endif
 		return 1;
     }
 
