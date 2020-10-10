@@ -18,6 +18,26 @@
 #include "field_stat2.h"
 #include "MESA_prof_load.h"
 
+#define GIT_VERSION_CATTER(v) __attribute__((__used__)) const char * GIT_VERSION_##v = NULL
+#define GIT_VERSION_EXPEND(v) GIT_VERSION_CATTER(v)
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    /* VERSION TAG */
+#ifdef GIT_VERSION
+    GIT_VERSION_EXPEND(GIT_VERSION);
+#else
+    static __attribute__((__used__)) const char * GIT_VERSION_UNKNOWN = NULL;
+#endif
+#undef GIT_VERSION_CATTER
+#undef GIT_VERSION_EXPEND
+
+#ifdef __cplusplus
+}
+#endif
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
