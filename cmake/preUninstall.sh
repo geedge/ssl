@@ -5,6 +5,9 @@ if [ $1 == 0 ]; then
 	mkdir -p ${DST}/plug/protocol/
 	touch ${DST}/plug/conflist.inf
 
+	mkdir -p ${DST}/etc/
+	touch ${DST}/etc/entrylist.conf
+
 	sed -i '/ssl.inf/d' ${DST}/plug/conflist.inf
 	sed -i '/SSL/d' ${DST}/etc/entrylist.conf
 fi
