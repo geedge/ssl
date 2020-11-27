@@ -673,7 +673,8 @@ UCHAR ssl_analyseStreamData(char *pcSslData, int iDataLen, int *res, ssl_stream 
 		return_val = ssl_doWithVersion(&a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);			
 		if(SSL_RETURN_NORM!= return_val)  return return_val;			
     }
-    while (iUnAnalyseLen > 0)
+	//2020.11.27  iUnAnalyseLen need more than SSL_RECORD_HDRLEN
+    while (iUnAnalyseLen > SSL_RECORD_HDRLEN)
     {
         if (SSL_HANDSHAKE_MSG_TRUNKED == a_ssl_stream->uiMsgState)
         {
