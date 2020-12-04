@@ -507,53 +507,60 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 		case OP_STATE_DATA:
      		return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);
     		a_ssl_stream = (ssl_stream *)*pme;
-    		if(APP_STATE_DROPME==return_val ||  SSL_RETURN_DROPME==return_val || a_ssl_stream->business->return_value&PROT_STATE_DROPME)
-    		{
-    			if(a_ssl_stream->business->return_value&PROT_STATE_DROPPKT)
-				{
-					state=APP_STATE_DROPME|APP_STATE_DROPPKT;
-				}
-				else
-				{
-					state=APP_STATE_DROPME;
-				}
-    			ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
-    			*pme = NULL;
-				
-    			return state;
-    		}
-       	break;
-	    case OP_STATE_CLOSE:
-	    	a_ssl_stream = (ssl_stream *)*pme;
-	        if(a_ssl_stream!=NULL)
+			if (SSL_RETURN_DROPME == return_val || a_ssl_stream->business->return_value & PROT_STATE_DROPME)
+			{
+				state = APP_STATE_DROPME;
+			}
+			if (a_ssl_stream->business->return_value & PROT_STATE_DROPPKT)
+			{
+				state |= APP_STATE_DROPPKT;
+				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;
+			}
+			if (state & APP_STATE_DROPME)
+			{
+				ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq, a_packet);
+				*pme = NULL;
+			}
+			return state;
+
+			break;
+		case OP_STATE_CLOSE:
+			a_ssl_stream = (ssl_stream *)*pme;
+			if (a_ssl_stream != NULL)
 			{
 				a_ssl_stream->over_flag = SSL_TRUE;
 			}
-			if(a_ssl_stream->uiSslVersion!=UNKNOWN_VERSION)
-			{			
+			if (a_ssl_stream->uiSslVersion != UNKNOWN_VERSION)
+			{
 				ssl_add_proto_tag(g_ssl_prog_para.proto_tag_id, a_tcp, "SSL", strlen("SSL"));
-				if(g_ssl_prog_para.stat_cycle)
-				{			
+				if (g_ssl_prog_para.stat_cycle)
+				{
 					atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S], a_tcp->ptcpdetail->serverpktnum);
 					atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C], a_tcp->ptcpdetail->clientpktnum);
 					atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S], a_tcp->ptcpdetail->serverbytes);
 					atomic_add(&g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C], a_tcp->ptcpdetail->clientbytes);
-					
-					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S]);
-					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C]);
-					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S]);
-					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C],0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
+
+					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S], 0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_C2S]);
+					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C], 0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_PKTS_S2C]);
+					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S], 0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_C2S]);
+					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C], 0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
 				}
 			}
-	    	return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);    	
-	    	if(NULL!=a_ssl_stream)
-	    	{
-	    		ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
-	    		*pme = NULL;
-	    	}  				
-			
-	    	return APP_STATE_DROPME;
-	    }
-	    return APP_STATE_GIVEME;
+			return_val = ssl_analyseStream(a_tcp, pme, thread_seq, a_packet);
+			state = APP_STATE_DROPME;
+			if (a_ssl_stream->business->return_value & PROT_STATE_DROPPKT)
+			{
+				state |= APP_STATE_DROPPKT;
+				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;
+			}
+			if (NULL != a_ssl_stream)
+			{
+				ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq, a_packet);
+				*pme = NULL;
+			}
+
+			return state;
+	}
+		return APP_STATE_GIVEME;
 }
 
