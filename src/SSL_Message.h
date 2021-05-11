@@ -45,6 +45,26 @@
 
 #define CERT_MAXNUM			 		8
 
+
+//#############################################client hello
+#define CLIENT_HELLO_HDRLEN 		4
+
+typedef struct _st_client_server_name_t
+{
+	short 					server_name_list_len;
+	unsigned short 			server_name_type;
+	unsigned char 			server_name_len;
+	unsigned char* 			server_name_data;
+}__attribute__((packed))st_client_server_name_t;
+
+//#############################################server hello
+#define  SERVER_HELLO_HDRLEN 		4
+
+//#############################################certificate
+#define CERTIFICATE_HDRLEN			7
+#define SSL_CERTIFICATE_HDRLEN  	3
+
+
 typedef struct _stValueString_t
 {
     unsigned int 			uiValue;
@@ -87,7 +107,8 @@ typedef enum _emHelloMsgType_m
 //    SERVER_HELLO_DONE = 14,
 //    CERTIFICATE_VERIFY = 15,
 //    CLIENT_KEY_EXCHANGE = 16,
-//   FINISHED = 20,
+//    FINISHED = 20,
+	NEW_SESSION_TICKET=4,
     MSG_UNKNOWN = 255,
 }emHelloMsgType_m;
 

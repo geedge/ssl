@@ -17,6 +17,8 @@
 #include "SSL_Proc.h"
 #include "field_stat2.h"
 #include "MESA_prof_load.h"
+#include "SSL_Common.h"
+
 
 #define GIT_VERSION_CATTER(v) __attribute__((__used__)) const char * GIT_VERSION_##v = NULL
 #define GIT_VERSION_EXPEND(v) GIT_VERSION_CATTER(v)
@@ -41,7 +43,7 @@ extern "C"
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20200617 = 0;
+int SSL_VERSION_1_20210428 = 0;
 
 void ssl_history()
 {
@@ -92,6 +94,15 @@ void ssl_history()
 //2020-01-09 V0.2 add stream tag
 //2020-06-15 V0.2 memset buf 
 //2020-06-17 V0.2 increase MAX_DATA_BUFFER 40960 
+//2020-12-02 V0.2 support session ticket
+//2020-12-03 V0.2 droppkt and dropme
+//2020-12-30 V0.2 add alpn
+//2021-02-07 V0.2 add SSLSubKey
+//2021-04-17 V0.2 support esni
+//2021-04-28 V0.2 add certlen for each cert
+
+
+
 
 
 //to do 
@@ -138,9 +149,6 @@ int ssl_readconf(const char* filename)
 
 int ssl_readMainConf(const char* filename)
 {
-	char 	http_log_filename[256];	
-	
-	
 	MESA_load_profile_int_def(filename, "FUNCTION", "stat_screen_print", &g_ssl_prog_para.stat_screen_print_trigger,0);
 	MESA_load_profile_int_def(filename, "FUNCTION", "stat_cycle", &g_ssl_prog_para.stat_cycle,0);
 	MESA_load_profile_string_def(filename, "FUNCTION", "stat_file", g_ssl_prog_para.stat_filename, sizeof(g_ssl_prog_para.stat_filename),"./log/ssl/ssl_stat.log");
@@ -236,7 +244,7 @@ void SSL_PROT_FUNSTAT(unsigned long long protflag)
 	return;
 }/*PROT_FUNSTAT*/
 
-unsigned long long ssl_getRegionID(char *string, int str_len, char g_string[MAX_REGION_NUM][REGION_NAME_LEN])
+unsigned long long ssl_getRegionID(char *string, int str_len, const char g_string[MAX_REGION_NUM][REGION_NAME_LEN])
 {
 	unsigned long long i=0;
 	for(i=0;i<g_ssl_prog_para.ssl_region_cnt;i++)
@@ -300,16 +308,16 @@ void ssl_initStructClientHello(st_client_hello_t* pstClientHello)
 
 	pstClientHello->session.session_value = NULL;
 	pstClientHello->session.session_len = 0;
-	pstClientHello->ciphersuits.suite_value = NULL;
-	pstClientHello->ciphersuits.suite_len = 0;
+	pstClientHello->ciphersuites.suites_value = NULL;
+	pstClientHello->ciphersuites.suites_len = 0;
 	pstClientHello->com_method.methods = NULL;
 	pstClientHello->com_method.methlen = 0;
+	pstClientHello->ext_num = 0;
 	memset(&pstClientHello->random, 0, sizeof(pstClientHello->random));
 	int i=0;
 	for(i=0;i<MAX_EXTENSION_NUM;i++)
 	{
 		memset(&pstClientHello->exts[i], 0, sizeof(pstClientHello->exts[i]));
-
 	}
 	memset(&pstClientHello->server_name, 0, sizeof(pstClientHello->server_name));
 	return;
@@ -321,11 +329,17 @@ void ssl_initStructServerHello(st_server_hello_t* pstServerHello)
 
 	pstServerHello->session.session_value = NULL;
 	pstServerHello->session.session_len = 0;
-	pstServerHello->ciphersuits.suite_value = NULL;
-	pstServerHello->ciphersuits.suite_len = 0;
+	pstServerHello->ciphersuites.suites_value = NULL;
+	pstServerHello->ciphersuites.suites_len = 0;
 	pstServerHello->com_method.methods = NULL;
 	pstServerHello->com_method.methlen = 0;
+	pstServerHello->ext_num = 0;
 	memset(&pstServerHello->random, 0, sizeof(pstServerHello->random));	
+	int i=0;
+	for(i=0;i<MAX_EXTENSION_NUM;i++)
+	{
+		memset(&pstServerHello->exts[i], 0, sizeof(pstServerHello->exts[i]));
+	}
 	return;
 }
 
@@ -361,19 +375,7 @@ int ssl_initSslStream(struct streaminfo *a_tcp, void **pme, int thread_seq)
 	a_ssl_stream->p_output_buffer = (cdata_buf*)dictator_malloc(thread_seq, sizeof(cdata_buf));
 	a_ssl_stream->p_output_buffer->data_size = 0;	
 	a_ssl_stream->p_output_buffer->p_data = 0;	
-
-	/*
-	a_ssl_stream->stSSLCert = (st_cert_t*)dictator_malloc(thread_seq,sizeof(st_cert_t));
-	memset(a_ssl_stream->stSSLCert, 0, sizeof(a_ssl_stream->stSSLCert));
-
-	a_ssl_stream->stClientHello = (st_client_hello_t*)dictator_malloc(thread_seq,sizeof(st_client_hello_t));
-	memset(a_ssl_stream->stClientHello, 0, sizeof(a_ssl_stream->stClientHello));
-	ssl_initStructClientHello(a_ssl_stream->stClientHello);
-
-	a_ssl_stream->stServerHello = (st_server_hello_t*)dictator_malloc(thread_seq,sizeof(st_server_hello_t));
-	memset(a_ssl_stream->stServerHello, 0, sizeof(a_ssl_stream->stServerHello));	
-	ssl_initStructServerHello(a_ssl_stream->stServerHello);
-	*/
+	
 	a_ssl_stream->output_region_mask = SSL_INTEREST_KEY_MASK;
 
 	a_ssl_stream->business = (business_infor_t *)dictator_malloc(thread_seq,sizeof(business_infor_t));
@@ -393,15 +395,35 @@ void ssl_releaseStructClientHello(int thread_seq, st_client_hello_t* pstClientHe
 		dictator_free(thread_seq,pstClientHello->session.session_value);
 		pstClientHello->session.session_value = NULL;
 	}
-	if(pstClientHello->ciphersuits.suite_value!=NULL)
+	if(pstClientHello->ciphersuites.suites_value!=NULL)
 	{
-		dictator_free(thread_seq,pstClientHello->ciphersuits.suite_value);
-		pstClientHello->ciphersuits.suite_value = NULL;
+		dictator_free(thread_seq,pstClientHello->ciphersuites.suites_value);
+		pstClientHello->ciphersuites.suites_value = NULL;
 	}
 	if(pstClientHello->com_method.methods!=NULL)
 	{
 		dictator_free(thread_seq,pstClientHello->com_method.methods);
 		pstClientHello->com_method.methods = NULL;
+	}	
+	if(pstClientHello->encrypted_server_name.key_exchange!=NULL)
+	{
+		dictator_free(thread_seq,pstClientHello->encrypted_server_name.key_exchange);
+		pstClientHello->encrypted_server_name.key_exchange = NULL;
+	}
+	if(pstClientHello->encrypted_server_name.esni!=NULL)
+	{
+		dictator_free(thread_seq,pstClientHello->encrypted_server_name.esni);
+		pstClientHello->encrypted_server_name.esni = NULL;
+	}
+	if(pstClientHello->encrypted_server_name.record_digest!=NULL)
+	{
+		dictator_free(thread_seq,pstClientHello->encrypted_server_name.record_digest);
+		pstClientHello->encrypted_server_name.record_digest = NULL;
+	}
+	if(pstClientHello->encrypted_server_name.suite_value!=NULL)
+	{
+		dictator_free(thread_seq,pstClientHello->encrypted_server_name.suite_value);
+		pstClientHello->encrypted_server_name.suite_value = NULL;
 	}
 	return;
 }
@@ -416,18 +438,19 @@ void ssl_releaseStructServerHello(int thread_seq,st_server_hello_t* pstServerHel
 		dictator_free(thread_seq,pstServerHello->session.session_value);
 		pstServerHello->session.session_value = NULL;
 	}
-	if(pstServerHello->ciphersuits.suite_value!=NULL)
+	if(pstServerHello->ciphersuites.suites_value!=NULL)
 	{
-		dictator_free(thread_seq,pstServerHello->ciphersuits.suite_value);
-		pstServerHello->ciphersuits.suite_value = NULL;
+		dictator_free(thread_seq,pstServerHello->ciphersuites.suites_value);
+		pstServerHello->ciphersuites.suites_value = NULL;
 	}
 	if(pstServerHello->com_method.methods!=NULL)
 	{
 		dictator_free(thread_seq,pstServerHello->com_method.methods);
 		pstServerHello->com_method.methods = NULL;
-	}
+	}	
 	return ;
 }
+
 
 void ssl_releaseSslStream(struct streaminfo *a_tcp, ssl_stream** pme, int thread_seq,void *a_packet)
 {
@@ -472,7 +495,11 @@ void ssl_releaseSslStream(struct streaminfo *a_tcp, ssl_stream** pme, int thread
 		dictator_free(thread_seq,a_ssl_stream->stServerHello);
 		a_ssl_stream->stServerHello = NULL;
 	}
-
+	if(NULL !=  a_ssl_stream->stNewSessionTicket)
+	{		
+		dictator_free(thread_seq,a_ssl_stream->stNewSessionTicket);
+		a_ssl_stream->stNewSessionTicket = NULL;
+	}
 	if(a_ssl_stream->pcSslBuffer!=NULL)
 	{
 		dictator_free(thread_seq,a_ssl_stream->pcSslBuffer);
@@ -506,27 +533,29 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
     		ssl_initSslStream(a_tcp, pme,thread_seq);
 		case OP_STATE_DATA:
      		return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);
-    		a_ssl_stream = (ssl_stream *)*pme;
-			if (SSL_RETURN_DROPME == return_val || a_ssl_stream->business->return_value & PROT_STATE_DROPME)
+    		a_ssl_stream = (ssl_stream *)*pme;			
+			
+    		if(SSL_RETURN_DROPME==return_val || a_ssl_stream->business->return_value&PROT_STATE_DROPME)
+    		{
+				state = APP_STATE_DROPME;					
+			}		
+			if(a_ssl_stream->business->return_value&PROT_STATE_DROPPKT)
 			{
-				state = APP_STATE_DROPME;
+				state |=APP_STATE_DROPPKT;
+				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;				
 			}
-			if (a_ssl_stream->business->return_value & PROT_STATE_DROPPKT)
-			{
-				state |= APP_STATE_DROPPKT;
-				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;
+			if(state&APP_STATE_DROPME)
+    		{				
+				ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
+				*pme = NULL;	
 			}
-			if (state & APP_STATE_DROPME)
-			{
-				ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq, a_packet);
-				*pme = NULL;
-			}
-			return state;
-
-			break;
-		case OP_STATE_CLOSE:
-			a_ssl_stream = (ssl_stream *)*pme;
-			if (a_ssl_stream != NULL)
+			
+			return state;			
+       	break;
+			
+	    case OP_STATE_CLOSE:
+	    	a_ssl_stream = (ssl_stream *)*pme;
+	        if(a_ssl_stream!=NULL)
 			{
 				a_ssl_stream->over_flag = SSL_TRUE;
 			}
@@ -546,21 +575,21 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C], 0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
 				}
 			}
-			return_val = ssl_analyseStream(a_tcp, pme, thread_seq, a_packet);
+	    	return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);  
 			state = APP_STATE_DROPME;
-			if (a_ssl_stream->business->return_value & PROT_STATE_DROPPKT)
+			if(a_ssl_stream->business->return_value&PROT_STATE_DROPPKT)
 			{
 				state |= APP_STATE_DROPPKT;
-				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;
-			}
-			if (NULL != a_ssl_stream)
-			{
-				ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq, a_packet);
-				*pme = NULL;
-			}
-
-			return state;
-	}
+				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;	
+			}			
+	    	if(NULL!=a_ssl_stream)
+	    	{
+	    		ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
+	    		*pme = NULL;
+	    	} 
+						
+	    	return state;
+	    }	
 		return APP_STATE_GIVEME;
 }
 

@@ -243,14 +243,18 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 	int cert_cnt = ssl_read_all_cert(pcCurSslCertificateData, iUnAnaCertLen, cert_unit, CERT_MAXNUM);
 
 	int i=0;
+	int totallen =  a_ssl_stream->stSSLCert->totallen;
 	for(i=0;i<cert_cnt;i++)
 	{
+		a_ssl_stream->stSSLCert->totallen = totallen;
 		return_val = fn_pGetSSLInfo(cert_unit[i].cert, cert_unit[i].cert_len, a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
         if( SSL_RETURN_NORM != return_val)      return return_val; 
-		
-		a_ssl_stream->output_region_mask = SSL_CERTIFICATE_DETAIL_MASK;	
-		a_ssl_stream->p_output_buffer->p_data = pcCurSslCertificateData;
+
+		a_ssl_stream->stSSLCert->certlen = cert_unit[i].cert_len;
+		a_ssl_stream->output_region_mask = SSL_CERTIFICATE_DETAIL_MASK; 
+		a_ssl_stream->p_output_buffer->p_data = cert_unit[i].cert;
 		a_ssl_stream->p_output_buffer->data_size = a_ssl_stream->stSSLCert->certlen;
+
 		switch(cert_num)
 		{
 			case 0:				
@@ -302,10 +306,15 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 			dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubAltName);
 			a_ssl_stream->stSSLCert->SSLSubAltName = NULL;
 		}
+		if(a_ssl_stream->stSSLCert->SSLSubKey!=NULL)
+		{
+			dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubKey);
+			a_ssl_stream->stSSLCert->SSLSubKey = NULL;
+		}
 #if PRINTF_CERTIFICATE
 		cert_log(a_ssl_stream); 		
-#endif 
-		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t)); 		
+#endif 		
+		memset(a_ssl_stream->stSSLCert,0,sizeof(st_cert_t));		
 		if(SSL_RETURN_NORM != return_val && SSL_RETURN_UNNORM != return_val )  	return return_val;  	
 	}
 	return SSL_RETURN_NORM;
@@ -1030,7 +1039,6 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		        			unsigned long long region_flag, int thread_seq, void *a_packet)
 {	
 	//return SSL_RETURN_NORM;
-	int data = 0;
 	
 	X509 *x509_handle = d2i_X509(NULL, (unsigned char const **)&pcCert, iLen);
 	if (x509_handle == NULL) 
@@ -1090,7 +1098,18 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 					 a_ssl_stream->stSSLCert->SSLSubO,
 					 a_ssl_stream->stSSLCert->SSLSubC);
 		}
-		
+
+		/*SSL Subject keyInfo*/
+		EVP_PKEY* pkey = X509_get_pubkey(x509_handle);
+		if(pkey!=NULL)
+		{
+			int pkeyLen=0;			
+			a_ssl_stream->stSSLCert->SSLSubKeyLen = i2d_PublicKey(pkey, NULL);;
+			a_ssl_stream->stSSLCert->SSLSubKey = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stSSLCert->SSLSubKeyLen);		
+			pkeyLen = i2d_PublicKey(pkey, &(a_ssl_stream->stSSLCert->SSLSubKey)); //!!! point will be changed
+			a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;					
+		}		
+				
 		/*validity*/
 		ASN1_TIME *start = X509_get_notBefore(x509_handle);
 		ASN1_TIME *end = X509_get_notAfter(x509_handle);
@@ -1103,7 +1122,6 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		int cnt = sk_GENERAL_NAME_num(subjectAltNames);
 		char* san = NULL;
 		ASN1_STRING *san_name;
-		int len = 0;
 		GENERAL_NAME* generalName;
 		if(cnt>0)
 		{			
@@ -1134,7 +1152,76 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		if(subjectAltNames)
 		{
 			GENERAL_NAMES_free(subjectAltNames);
+		}		
+
+		/*extension*/	
+		/*SCT*/
+		/*
+		GENERAL_NAMES* subjectAltNames = (GENERAL_NAMES*)X509_get_ext_d2i(x509_handle, NID_subject_alt_name, NULL, NULL);  
+		if(!subjectAltNames) goto cert_return;
+		int cnt = sk_GENERAL_NAME_num(subjectAltNames);
+		char* san = NULL;
+		ASN1_STRING *san_name;
+		GENERAL_NAME* generalName;
+		if(cnt>0)
+		{			
+			a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)dictator_malloc(thread_seq, sizeof(st_san_t));
+			a_ssl_stream->stSSLCert->SSLSubAltName->san_array = (san_t*)dictator_malloc(thread_seq, cnt*sizeof(san_t));
+			memset(a_ssl_stream->stSSLCert->SSLSubAltName->san_array,0,cnt*sizeof(san_t));
+			a_ssl_stream->stSSLCert->SSLSubAltName->count = 0;
+			for (int i = 0; i < cnt; i++)
+			{       
+				generalName = sk_GENERAL_NAME_value(subjectAltNames, i);
+				if(!generalName) goto cert_return;
+				if(GEN_DNS == generalName->type)
+				{
+					san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
+					if(ASN1_STRING_length(san_name)>0)
+					{
+						san = (char*)ASN1_STRING_data(san_name);
+						snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san,
+								 sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san),
+								 "%s",
+								 san);						
+						a_ssl_stream->stSSLCert->SSLSubAltName->count++;
+					}	
+				}			
+			}
+		
+		/* GET ALL EXTENSION
+		int ext_num = X509_get_ext_count(x509_handle);
+		X509_EXTENSION* ext;
+		ASN1_OBJECT* obj;
+		int oid; 
+		STACK_OF(CONF_VALUE)* item;
+		int item_num=0;
+		CONF_VALUE *val;
+		for(int i=0;i<ext_num;i++)
+		{
+			ext = X509_get_ext(x509_handle, i);
+			if(ext!=NULL)
+			{
+				item = X509V3_parse_list((const char *)ext->value->data);
+				item_num = sk_CONF_VALUE_num(item);
+				for (int j = 0; j<item_num; j++) 
+				{
+					val = sk_CONF_VALUE_value(item, i);
+					//val->section;
+					//val->name;
+				}
+				obj = X509_EXTENSION_get_object(ext);
+				if(obj!=NULL)
+				{
+					oid = OBJ_obj2nid(obj);
+					///*SCT:  Signed Certificate Timestamp; OID is 1.3.6.1.4.1.11129.2.4.2; NID: NID_ct_cert_scts
+					if(oid=SCT_OID)
+					{						
+													 
+					}
+				}				
+			}			
 		}
+		*/
 	}	
 
 cert_return:

@@ -20,9 +20,14 @@ int 	BtoL3BytesNum(char *pcData);
 int 	BtoL4BytesNum(char *pcData);
 
 int 			ssl_protoRecg(char *pcData, int iDataLen);
+char *fn_pcGetSuite(unsigned char *pucId, int iIdLen, stSerialString_t *pastElemTypes);
 UCHAR 			ssl_doWithVersion(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet);
+UCHAR 			ssl_doWithNewSessionTicket(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
+						unsigned long long region_flag, int thread_seq, void *a_packet);
 UCHAR 			ssl_doWithApplicationData(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
+						unsigned long long region_flag, int thread_seq, void *a_packet);
+UCHAR 			ssl_doWithAlert(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet);
 UCHAR 			ssl_doWithCertificate(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet);

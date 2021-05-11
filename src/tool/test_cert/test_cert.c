@@ -73,6 +73,18 @@ int BtoL3BytesNum(char *pcData)
     return uiLength;
 }
 
+int BtoL4BytesNum(char *pcData)
+{
+    int uiLength = 0;
+    uiLength = pcData[0];
+    uiLength = (uiLength << 8) + (unsigned char)pcData[1];
+    uiLength = (uiLength << 8) + (unsigned char)pcData[2];
+	uiLength = (uiLength << 8) + (unsigned char)pcData[3];
+
+    return uiLength;
+}
+
+
 typedef struct _stValueString_t
 {
     unsigned int 			uiValue;

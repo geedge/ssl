@@ -11,6 +11,10 @@
 
 #define	CERT_TYPE_MAXNUM			16
 
+//#define SCT_OID 					1.3.6.1.4.1.11129.2.4.2
+#define SCT_OID 					1
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
