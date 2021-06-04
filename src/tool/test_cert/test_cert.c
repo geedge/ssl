@@ -60,7 +60,7 @@ typedef struct _st_cert_t
 	char 					SSLSubO[64]; //organize
 	char 					SSLSubCN[64];//cname		
 	st_san_t* 				SSLSubAltName;  
-	uint8_t 				cert_type;
+	uint8_t 				cert_type;	
 }st_cert_t;
 
 int BtoL3BytesNum(char *pcData)

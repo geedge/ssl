@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SSH_H_VERSION_20201202_ADD_SESSION_TICKET		0
+#define SSH_H_VERSION_20210529_SSLSerialNumLen		0
 
 #define SSL_KEY 									3
 #define SSL_TRUE 								1
@@ -195,7 +195,7 @@ typedef struct _st_cert_t
 {
 	int 					totallen;
 	int 					certlen;
-	char 					SSLVersion[10];   
+	char 					SSLVersion[10]; 	
 	char 					SSLSerialNum[128];
 	char 					SSLAgID [64];     
 	char 					SSLIssuer[512];  	
@@ -213,6 +213,7 @@ typedef struct _st_cert_t
 	uint8_t 				cert_type;
 	unsigned char*			SSLSubKey;
 	int						SSLSubKeyLen;	
+	uint8_t 				SSLSerialNumLen;
 }st_cert_t;
 
 //#############################################certificate end

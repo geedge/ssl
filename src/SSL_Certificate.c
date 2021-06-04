@@ -310,7 +310,7 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 		{
 			dictator_free(thread_seq,a_ssl_stream->stSSLCert->SSLSubKey);
 			a_ssl_stream->stSSLCert->SSLSubKey = NULL;
-		}
+		}		
 #if PRINTF_CERTIFICATE
 		cert_log(a_ssl_stream); 		
 #endif 		
@@ -1058,9 +1058,10 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		/*serial num*/
 		if(NULL!=x509_handle->cert_info->serialNumber)
 		{
+			a_ssl_stream->stSSLCert->SSLSerialNumLen = x509_handle->cert_info->serialNumber->length;
 			memcpy(a_ssl_stream->stSSLCert->SSLSerialNum, 
 					x509_handle->cert_info->serialNumber->data, 
-					x509_handle->cert_info->serialNumber->length);
+					MIN(x509_handle->cert_info->serialNumber->length,sizeof(a_ssl_stream->stSSLCert->SSLSerialNum)));
 		}		
 
 		/*SSL AgID*/		
