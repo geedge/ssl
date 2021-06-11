@@ -1108,7 +1108,9 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			a_ssl_stream->stSSLCert->SSLSubKeyLen = i2d_PublicKey(pkey, NULL);;
 			a_ssl_stream->stSSLCert->SSLSubKey = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stSSLCert->SSLSubKeyLen);		
 			pkeyLen = i2d_PublicKey(pkey, &(a_ssl_stream->stSSLCert->SSLSubKey)); //!!! point will be changed
-			a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;					
+			a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;
+
+			EVP_PKEY_free(pkey);
 		}		
 				
 		/*validity*/
