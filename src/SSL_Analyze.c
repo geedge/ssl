@@ -43,7 +43,7 @@ extern "C"
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20210529 = 0;
+int SSL_VERSION_1_20210727 = 0;
 
 void ssl_history()
 {
@@ -101,6 +101,7 @@ void ssl_history()
 //2021-04-17 V0.2 support esni
 //2021-04-28 V0.2 add certlen for each cert
 //2021-05-29 V0.2 add SSLSerialNumLen
+//2021-07-27 V0.2 add subject and issuer = commonName +  organizationName + organizationalUnitName + localityName + streetAddress + stateOrProvinceName + countryName	 
 
 
 

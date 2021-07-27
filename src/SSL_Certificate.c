@@ -1074,13 +1074,22 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		{
 			X509_NAME_get_text_by_NID(issuer, NID_commonName, a_ssl_stream->stSSLCert->SSLIssuerCN, sizeof(a_ssl_stream->stSSLCert->SSLIssuerCN));
 			X509_NAME_get_text_by_NID(issuer, NID_organizationName, a_ssl_stream->stSSLCert->SSLIssuerO, sizeof(a_ssl_stream->stSSLCert->SSLIssuerO));
+			X509_NAME_get_text_by_NID(issuer, NID_organizationalUnitName, a_ssl_stream->stSSLCert->SSLIssuerU, sizeof(a_ssl_stream->stSSLCert->SSLIssuerU));
+			X509_NAME_get_text_by_NID(issuer, NID_localityName, a_ssl_stream->stSSLCert->SSLIssuerL, sizeof(a_ssl_stream->stSSLCert->SSLIssuerL));
+			X509_NAME_get_text_by_NID(issuer, NID_streetAddress, a_ssl_stream->stSSLCert->SSLIssuerS, sizeof(a_ssl_stream->stSSLCert->SSLIssuerS));
+			X509_NAME_get_text_by_NID(issuer, NID_stateOrProvinceName, a_ssl_stream->stSSLCert->SSLIssuerP, sizeof(a_ssl_stream->stSSLCert->SSLIssuerP));			
 			X509_NAME_get_text_by_NID(issuer, NID_countryName, a_ssl_stream->stSSLCert->SSLIssuerC, sizeof(a_ssl_stream->stSSLCert->SSLIssuerC));
+			
 
 			snprintf(a_ssl_stream->stSSLCert->SSLIssuer,
 					 sizeof(a_ssl_stream->stSSLCert->SSLIssuer),
-					 "%s;%s;%s",
+					 "%s;%s;%s;%s;%s;%s;%s",
 					 a_ssl_stream->stSSLCert->SSLIssuerCN,
 					 a_ssl_stream->stSSLCert->SSLIssuerO,
+					 a_ssl_stream->stSSLCert->SSLIssuerU,
+					 a_ssl_stream->stSSLCert->SSLIssuerL,
+					 a_ssl_stream->stSSLCert->SSLIssuerS,
+					 a_ssl_stream->stSSLCert->SSLIssuerP,
 					 a_ssl_stream->stSSLCert->SSLIssuerC);
 		}
 
@@ -1092,11 +1101,25 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 			X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
 			X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
 
+
+			X509_NAME_get_text_by_NID(subject, NID_commonName, a_ssl_stream->stSSLCert->SSLSubCN, sizeof(a_ssl_stream->stSSLCert->SSLSubCN));
+			X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
+			X509_NAME_get_text_by_NID(subject, NID_organizationalUnitName, a_ssl_stream->stSSLCert->SSLSubU, sizeof(a_ssl_stream->stSSLCert->SSLSubU));
+			X509_NAME_get_text_by_NID(subject, NID_localityName, a_ssl_stream->stSSLCert->SSLSubL, sizeof(a_ssl_stream->stSSLCert->SSLSubL));
+			X509_NAME_get_text_by_NID(subject, NID_streetAddress, a_ssl_stream->stSSLCert->SSLSubS, sizeof(a_ssl_stream->stSSLCert->SSLSubS));
+			X509_NAME_get_text_by_NID(subject, NID_stateOrProvinceName, a_ssl_stream->stSSLCert->SSLSubP, sizeof(a_ssl_stream->stSSLCert->SSLSubP));			
+			X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
+			
+
 			snprintf(a_ssl_stream->stSSLCert->SSLSub,
 					 sizeof(a_ssl_stream->stSSLCert->SSLSub),
-					 "%s;%s;%s",
+					 "%s;%s;%s;%s;%s;%s;%s",
 					 a_ssl_stream->stSSLCert->SSLSubCN,
 					 a_ssl_stream->stSSLCert->SSLSubO,
+					 a_ssl_stream->stSSLCert->SSLSubU,
+					 a_ssl_stream->stSSLCert->SSLSubL,
+					 a_ssl_stream->stSSLCert->SSLSubS,
+					 a_ssl_stream->stSSLCert->SSLSubP,
 					 a_ssl_stream->stSSLCert->SSLSubC);
 		}
 

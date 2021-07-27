@@ -45,23 +45,38 @@ typedef struct _st_cert_t
 {
 	int 					totallen;
 	int 					certlen;
-	char 					SSLVersion[10];   
+	char 					SSLVersion[10]; 	
 	char 					SSLSerialNum[128];
 	char 					SSLAgID [64];     
-	char 					SSLIssuer[512];  	
-	char 					SSLSub[512];    
+	char 					SSLIssuer[512];  //commonName +  organizationName + organizationalUnitName + localityName + streetAddress + stateOrProvinceName + countryName	
+	char 					SSLSub[512]; //commonName +  organizationName + organizationalUnitName + localityName + streetAddress + stateOrProvinceName + countryName
 	char 					SSLFrom[80];     
 	char 					SSLTo[80];     
 	char 					SSLFPAg[32];  	 	
-	char 					SSLIssuerC[64]; //country  	
-	char 					SSLIssuerO[64]; //organize
-	char 					SSLIssuerCN[64];//cname	
-	char 					SSLSubC[64]; //country  	
-	char 					SSLSubO[64]; //organize
-	char 					SSLSubCN[64];//cname		
+	char 					SSLIssuerC[64]; //countryName  	
+	char 					SSLIssuerO[64]; //organizationName
+	char 					SSLIssuerCN[64];//commonName	
+	char 					SSLSubC[64]; //countryName  	
+	char 					SSLSubO[64]; //organizationName
+	char 					SSLSubCN[64];//commonName		
 	st_san_t* 				SSLSubAltName;  
-	uint8_t 				cert_type;	
+	uint8_t 				cert_type;
+	unsigned char*			SSLSubKey;
+	int						SSLSubKeyLen;	
+	uint8_t 				SSLSerialNumLen;
+	
+	char 					SSLIssuerP[64];//stateOrProvinceName
+	char 					SSLIssuerS[64];//streetAddress
+	char 					SSLIssuerL[64];//localityName
+	char 					SSLIssuerU[64];//organizationalUnitName
+
+	char 					SSLSubP[64];//stateOrProvinceName
+	char 					SSLSubS[64];//streetAddress
+	char 					SSLSubL[64];//localityName
+	char 					SSLSubU[64];//organizationalUnitName
+	
 }st_cert_t;
+
 
 int BtoL3BytesNum(char *pcData)
 {
