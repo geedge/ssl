@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SSH_H_VERSION_20210727_subject		0
+#define SSH_H_VERSION_20210805_ssl20		0
 
 #define SSL_KEY 									3
 #define SSL_TRUE 								1
@@ -263,6 +263,7 @@ typedef struct _ssl_stream_t
 	int 						uiCurBuffLen; 
 	
 	st_new_session_ticket_t*		stNewSessionTicket;
+	unsigned char 				first_pkt_flag;	
 }ssl_stream;
 
 /*ssl_read_all_cert中的结构体*/

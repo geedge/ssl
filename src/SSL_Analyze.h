@@ -41,6 +41,7 @@ typedef long atomic_t;
 #define SSL_RETURN_NORM 				0x53
 #define SSL_RETURN_UNNORM 				0x54
 #define SSL_RETURN_RESET_BUFFER			0x55
+#define SSL_RETURN_GIVEME 				0x56
 #define SSL_RETURN_DROPME 				0x57
 
 #define MAX_REGION_NUM 					15

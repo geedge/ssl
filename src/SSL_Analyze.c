@@ -43,7 +43,7 @@ extern "C"
 
 ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
 
-int SSL_VERSION_1_20210727 = 0;
+int SSL_VERSION_1_20210805 = 0;
 
 void ssl_history()
 {
@@ -102,6 +102,7 @@ void ssl_history()
 //2021-04-28 V0.2 add certlen for each cert
 //2021-05-29 V0.2 add SSLSerialNumLen
 //2021-07-27 V0.2 add subject and issuer = commonName +  organizationName + organizationalUnitName + localityName + streetAddress + stateOrProvinceName + countryName	 
+//2021-08-05 V0.2 client hello SSL 2.0
 
 
 
@@ -540,7 +541,11 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
     		if(SSL_RETURN_DROPME==return_val || a_ssl_stream->business->return_value&PROT_STATE_DROPME)
     		{
 				state = APP_STATE_DROPME;					
-			}		
+			}
+			if(SSL_RETURN_GIVEME==return_val)
+			{
+				state = APP_STATE_GIVEME;
+			}
 			if(a_ssl_stream->business->return_value&PROT_STATE_DROPPKT)
 			{
 				state |=APP_STATE_DROPPKT;
@@ -551,7 +556,7 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 				ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
 				*pme = NULL;	
 			}
-			
+					
 			return state;			
        	break;
 			

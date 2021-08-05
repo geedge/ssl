@@ -717,11 +717,20 @@ UCHAR ssl_analyseSsl(char *pcSslData, int iDataLen, int *res, ssl_stream *a_ssl_
     /**first packet of an hand shake conversation**/
     if (UNKNOWN_VERSION == a_ssl_stream->uiSslVersion)
     {
-        a_ssl_stream->uiSslVersion = (unsigned int)ssl_protoRecg(pcSslData, iDataLen);
+        a_ssl_stream->uiSslVersion = (unsigned int)ssl_protoRecg(pcSslData, iDataLen);		
+		/*jump the first pkt*/
         if (UNKNOWN_VERSION == a_ssl_stream->uiSslVersion)
         {
         	*res = -1;
-        	return SSL_RETURN_DROPME;
+			if(a_ssl_stream->first_pkt_flag==0)
+			{
+				a_ssl_stream->first_pkt_flag = 1;
+				return SSL_RETURN_GIVEME;
+			}
+			else
+			{
+				return SSL_RETURN_DROPME;
+			}        	
         }
 		/*version callback*/
 		return_val = ssl_doWithVersion(&a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);			

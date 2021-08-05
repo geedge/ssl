@@ -1,5 +1,17 @@
 # 0. 功能升级历史
 
+* 2021.8.5
+
+  ssl2.0版本已经废弃，但是可能出现第一个包是ssl2.0,后续数据包tls1.2的情况，因此支持第一个数据包识别错误，第二个数据包继续解析的。参见imaps-64593.pcap
+
+  **注意ssl.h有更新，向上兼容**	 
+
+* 2021.7.27
+
+  证书拥有者subject和颁发者issuer包括commonName +  organizationName + organizationalUnitName + localityName + streetAddress + stateOrProvinceName + countryName
+
+  **注意ssl.h有更新**	 
+
 * 2021.4.17
 
   支持esni提取，使用方法参考ssl.h中 st_esni_t结构体
