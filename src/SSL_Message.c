@@ -478,7 +478,7 @@ UCHAR ssl_analyseHandShake(char *pcSslData,  int iAllMsgLen,  int iSslUnAnalyseL
 				a_ssl_stream->stServerHello->exts[i].len = (unsigned short)BtoL2BytesNum(pcCurSslData);
 				pcCurSslData += sizeof(a_ssl_stream->stServerHello->exts[i].len);
 				iUnAnaHelloLen -= sizeof(a_ssl_stream->stServerHello->exts[i].len);
-				if(iUnAnaHelloLen<0)
+				if(iUnAnaHelloLen<0 || a_ssl_stream->stServerHello->exts[i].len>iUnAnaHelloLen)
 				{
 					return SSL_RETURN_DROPME;
 				}
