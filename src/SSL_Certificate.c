@@ -1050,7 +1050,7 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 	{
 		/*version*/
 		int ver = X509_get_version(x509_handle);
-		if(ver>CERT_VER_MAXNUM) goto cert_return;
+		if(ver>CERT_VER_MAXNUM || ver<0) goto cert_return;
 		memcpy(a_ssl_stream->stSSLCert->SSLVersion, 
 				g_astCertVersions[ver].pcString, 
 				1 + strlen((const char *)g_astCertVersions[ver].pcString));
