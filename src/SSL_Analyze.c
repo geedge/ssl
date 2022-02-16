@@ -170,21 +170,29 @@ int ssl_add_proto_tag(int projetc_id, struct streaminfo *a_stream, const char* v
 	struct ssl_proto_tag_t* proto_tag = (struct ssl_proto_tag_t*)project_req_get_struct(a_stream,projetc_id);   
 	if(proto_tag == NULL)   
 	{        
-		proto_tag = (struct ssl_proto_tag_t *)calloc(sizeof(struct ssl_proto_tag_t), 1);        
+		proto_tag = (struct ssl_proto_tag_t *)dictator_malloc(a_stream->threadnum, sizeof(struct ssl_proto_tag_t)); 
+		memcpy(proto_tag->buf, value, len);  
+		proto_tag->buf[len]='\0';
+	
 		if(0 != project_req_add_struct(a_stream, projetc_id, proto_tag))        
 		{            
-			free(proto_tag);            
+			dictator_free(a_stream->threadnum, proto_tag);
+			proto_tag=NULL;
 			return -1;        
 		}    
-	}    
-	memcpy(proto_tag->buf, value, len);  
-	proto_tag->buf[len]='\0';
+	} 
+
 	return 0;
 }
 
 void ssl_proto_tag_free(int thread_seq, void *value)
-{    
-	free(value);    
+{
+	if(value!=NULL)
+	{
+		dictator_free(thread_seq, value);
+		value=NULL;
+	}
+	
 	return;
 }
 
