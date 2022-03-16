@@ -33,18 +33,21 @@ endif()
 include_directories(/opt/MESA/include/MESA/)
 include_directories(./src/inc/)
 include_directories(./src/)
+include_directories(include)
+
+add_subdirectory(support)
 
 file(GLOB SRC
     "src/*.c"
     "src/*.cpp"
 )
 
-set(DNS_DEPEND_DYN_LIB MESA_handle_logger MESA_field_stat2 MESA_prof_load)
+set(DEPEND_DYN_LIB MESA_handle_logger MESA_field_stat2 MESA_prof_load)
 
 # Shared Library Output
 add_library(ssl SHARED ${SRC})
 set_target_properties(ssl  PROPERTIES PREFIX "")
-target_link_libraries(ssl ${DNS_DEPEND_DYN_LIB})
+target_link_libraries(ssl ${DEPEND_DYN_LIB} -Wl,--no-whole-archive openssl-crypto-static -Wl,--no-whole-archive openssl-ssl-static)
 #target_link_libraries(ssl "openssl.so")
 if(DEFINED MESA_SHARED_INSTALL_DIR)
 	set_target_properties(ssl PROPERTIES OUTPUT_NAME ${lib_name} LIBRARY_OUTPUT_DIRECTORY ${MESA_SHARED_INSTALL_DIR})
