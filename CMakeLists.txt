@@ -7,7 +7,6 @@ project (${lib_name})
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(Version)
 
-SET(CMAKE_C_COMPILER "/usr/bin/g++")
 set(CMAKE_MACOSX_RPATH 0)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -Wall)
 
@@ -44,6 +43,8 @@ file(GLOB SRC
 
 set(DEPEND_DYN_LIB MESA_handle_logger MESA_field_stat2 MESA_prof_load)
 
+SET_SOURCE_FILES_PROPERTIES(${SRC} PROPERTIES LANGUAGE CXX )
+
 # Shared Library Output
 add_library(ssl SHARED ${SRC})
 set_target_properties(ssl  PROPERTIES PREFIX "")
@@ -56,6 +57,9 @@ else()
 endif()
 
 set(CMAKE_INSTALL_PREFIX /home/mesasoft/sapp_run/)
+
+enable_testing()
+add_subdirectory(test)
 
 set(CPACK_RPM_LIBRARIES_USER_FILELIST "%config(noreplace) ${CMAKE_INSTALL_PREFIX}/plug/protocol/ssl/ssl.inf"
                                          "%config(noreplace) ${CMAKE_INSTALL_PREFIX}/conf/ssl/ssl.conf")

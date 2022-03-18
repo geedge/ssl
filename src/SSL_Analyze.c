@@ -116,22 +116,22 @@ void ssl_history()
 int ssl_readconf(const char* filename)
 {	
 	FILE 	*fp 			= NULL;
-	char 	buf[2048] 		= {0};	
-	int 	region_id 		= 0;
-	int 	temp 		= 0;
-	char 	region_name[REGION_NAME_LEN] 	= {0};	
+
 
 	if(((fp = fopen(filename, "r"))!=NULL))
 	{
+		char 	buf[2048]={0};	
+		int 	region_id=0;
+		char 	region_name[REGION_NAME_LEN]={0};	
 		 while( fgets(buf, sizeof(buf), fp))
 		 {
-			 temp = sscanf(buf, "%d\t%s", &region_id, region_name);
+			 int temp = sscanf(buf, "%d\t%31s", &region_id, region_name);  //szieof(region_name)=32
 			 if ( 2 > temp )
 			 {
 				 printf( "ssl.so : ssl.conf %s read error\n", filename);
 				 return -1;
 			 }
-			 if(region_id>MAX_REGION_NUM)
+			 if(region_id>=MAX_REGION_NUM)
 			 {
 			 	 printf( "ssl.so : ssl.conf %d bigger than MAX_REGION_NUM\n", region_id);
 				 return -1;
@@ -198,7 +198,6 @@ void ssl_proto_tag_free(int thread_seq, void *value)
 
 int SSL_INIT(void)
 {
-	int 	value = 0;		
 	memset(&g_ssl_prog_para,0,sizeof(ssl_prog_runtime_parameter_t));	
 	strcat(g_ssl_prog_para.ssl_conf_filename, "./conf/ssl/ssl.conf");
 	
@@ -216,7 +215,7 @@ int SSL_INIT(void)
 	{	
 		g_ssl_prog_para.stat_handler = FS_create_handle();
 		FS_set_para(g_ssl_prog_para.stat_handler, OUTPUT_DEVICE, g_ssl_prog_para.stat_filename, strlen(g_ssl_prog_para.stat_filename)+1);
-		value = 1;//flush by date
+		int value = 1;//flush by date
 		FS_set_para(g_ssl_prog_para.stat_handler, FLUSH_BY_DATE, &value, sizeof(value));	
 		value = 2;//append
 		FS_set_para(g_ssl_prog_para.stat_handler, PRINT_MODE, &value, sizeof(value));	
@@ -273,7 +272,6 @@ long long SSL_FLAG_CHANGE(char* flag_str)
 	if(flag_str==NULL) return -1;
 	
 	long long protflag = 0;
-	long long region_id = 0;	
 	char *start_token = flag_str;
 	char *end_token = flag_str;
 	char *end_pos = flag_str+strlen(flag_str);
@@ -293,7 +291,7 @@ long long SSL_FLAG_CHANGE(char* flag_str)
 			memcpy(region_name, start_token, end_pos-start_token);			
 			end_token = end_pos;		
 		}
-		region_id = ssl_getRegionID(region_name, strlen(region_name), g_ssl_prog_para.ssl_conf_regionname);
+		long long region_id = ssl_getRegionID(region_name, strlen(region_name), g_ssl_prog_para.ssl_conf_regionname);
 		if(-1==region_id)
 		{
 			printf( "ssl.so : PROT_CHANGE %s read %s error\n", flag_str, region_name);
@@ -307,7 +305,7 @@ long long SSL_FLAG_CHANGE(char* flag_str)
 
 UCHAR ssl_doWithInsterestedRegion(struct streaminfo *a_tcp)
 {
-	/*ÒµÎñ²ãÃ»ÓÐ×¢²áÐËÈ¤Óò*/
+	/*Òµï¿½ï¿½ï¿½Ã»ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½È¤ï¿½ï¿½*/
 	if(g_ssl_prog_para.ssl_interested_region_flag < SSL_KEY)		return APP_STATE_DROPME;
 	
 	return SSL_RETURN_NORM;
@@ -357,17 +355,13 @@ void ssl_initStructServerHello(st_server_hello_t* pstServerHello)
 int ssl_initSslStream(struct streaminfo *a_tcp, void **pme, int thread_seq)
 {
     /**Variables define**/
-    ssl_stream *a_ssl_stream = (ssl_stream *)*pme;   
-
-    if(NULL != a_ssl_stream)
-    	return -1;
-
-    a_ssl_stream = (ssl_stream *)dictator_malloc(thread_seq, sizeof(ssl_stream));
+    if(NULL != *pme)
+	{
+		return -1;
+	}
+    	
+    ssl_stream *a_ssl_stream = (ssl_stream *)dictator_malloc(thread_seq, sizeof(ssl_stream));
 	memset(a_ssl_stream,0,sizeof(ssl_stream));
-    if (NULL == a_ssl_stream)
-    {
-        return -1;
-    }
 
     a_ssl_stream->output_region_flag = g_ssl_prog_para.ssl_interested_region_flag; 
 
@@ -570,10 +564,12 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 			
 	    case OP_STATE_CLOSE:
 	    	a_ssl_stream = (ssl_stream *)*pme;
-	        if(a_ssl_stream!=NULL)
+	        if(a_ssl_stream==NULL)
 			{
-				a_ssl_stream->over_flag = SSL_TRUE;
+				return APP_STATE_DROPME;
 			}
+
+			a_ssl_stream->over_flag = SSL_TRUE;
 			if (a_ssl_stream->uiSslVersion != UNKNOWN_VERSION)
 			{
 				ssl_add_proto_tag(g_ssl_prog_para.proto_tag_id, a_tcp, "SSL", strlen("SSL"));
@@ -590,19 +586,17 @@ char SSL_ENTRY(struct streaminfo *a_tcp, void**pme, int thread_seq, void *a_pack
 					FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C], 0, FS_OP_SET, g_ssl_prog_para.stat_value[SSL_STAT_BITS_S2C]);
 				}
 			}
-	    	return_val = ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);  
+	    	ssl_analyseStream(a_tcp, pme ,thread_seq, a_packet);  
 			state = APP_STATE_DROPME;
 			if(a_ssl_stream->business->return_value&PROT_STATE_DROPPKT)
 			{
 				state |= APP_STATE_DROPPKT;
 				a_ssl_stream->business->return_value ^= PROT_STATE_DROPPKT;	
 			}			
-	    	if(NULL!=a_ssl_stream)
-	    	{
-	    		ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
-	    		*pme = NULL;
-	    	} 
-						
+		
+			ssl_releaseSslStream(a_tcp, &a_ssl_stream, thread_seq,a_packet);
+			*pme = NULL;
+	    				
 	    	return state;
 	    }	
 		return APP_STATE_GIVEME;

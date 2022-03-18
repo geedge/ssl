@@ -71,7 +71,6 @@ int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint
 	char* 			unproc_cert = (char*)conj_cert_buf;	
 	uint32_t		unproc_certlen = conj_buflen;		
 	char*			cur_cert = NULL;
-	uint32_t		cur_certlen = 0;
 	uint32_t		cert_unit_cnt = 0;
 	cert_chain_t 	cert_unit[CERT_TYPE_MAXNUM];
 	
@@ -81,8 +80,8 @@ int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint
 		{
 			break;
 		}
-		cur_certlen = BtoL3BytesNum(unproc_cert);
-		if(((int)cur_certlen <0) || cur_certlen+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
+		cert_unit[cert_unit_cnt].cert_len = BtoL3BytesNum(unproc_cert);
+		if(((int)cert_unit[cert_unit_cnt].cert_len <0) || cert_unit[cert_unit_cnt].cert_len+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
 		{
 			break;
 		}
@@ -90,14 +89,14 @@ int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint
 		if(cert_unit_cnt==0&&CERT_TYPE_INDIVIDUAL==cert_type)
 		{
 			*cert = cur_cert;
-			*cert_len = cur_certlen;
+			*cert_len = cert_unit[cert_unit_cnt].cert_len;
 			return 1;
 		}
 		cert_unit[cert_unit_cnt].cert = cur_cert;
-		cert_unit[cert_unit_cnt].cert_len = cur_certlen;		
+        unproc_certlen -= (SSL_CERTIFICATE_HDRLEN+cert_unit[cert_unit_cnt].cert_len);
+		unproc_cert += SSL_CERTIFICATE_HDRLEN+cert_unit[cert_unit_cnt].cert_len;
 		cert_unit_cnt++;
-        unproc_certlen -= (SSL_CERTIFICATE_HDRLEN+cur_certlen);
-		unproc_cert += SSL_CERTIFICATE_HDRLEN+cur_certlen;
+
 	}
 
 	switch(cert_type)
@@ -151,7 +150,6 @@ int ssl_read_all_cert(const char* conj_cert_buf, uint32_t conj_buflen, cert_chai
 	char* 		unproc_cert = (char*)conj_cert_buf;	
 	uint32_t	unproc_certlen = conj_buflen;		
 	char*		cur_cert = NULL;
-	uint32_t	cur_certlen = 0;
 	uint32_t	cert_unit_cnt = 0;
 	
     while ((int)unproc_certlen > 0)
@@ -160,20 +158,17 @@ int ssl_read_all_cert(const char* conj_cert_buf, uint32_t conj_buflen, cert_chai
 		{
 			break;
 		}
-		cur_certlen = BtoL3BytesNum(unproc_cert);
-		if((int)cur_certlen <0 || cur_certlen+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
+		cert_unit[cert_unit_cnt].cert_len = BtoL3BytesNum(unproc_cert);
+		if((int)cert_unit[cert_unit_cnt].cert_len <0 || cert_unit[cert_unit_cnt].cert_len+SSL_CERTIFICATE_HDRLEN>unproc_certlen) 
 		{
 			break;
 		}
-		cur_cert = unproc_cert+SSL_CERTIFICATE_HDRLEN;		
-		if(cert_unit_cnt<unit_size)
-		{
-			cert_unit[cert_unit_cnt].cert = cur_cert;
-			cert_unit[cert_unit_cnt].cert_len = cur_certlen;
-		}		
-		cert_unit_cnt++;
-        unproc_certlen -= (SSL_CERTIFICATE_HDRLEN+cur_certlen);
-		unproc_cert += SSL_CERTIFICATE_HDRLEN+cur_certlen;
+		cur_cert = unproc_cert+SSL_CERTIFICATE_HDRLEN;	
+        cert_unit[cert_unit_cnt].cert = cur_cert;	
+        unproc_certlen -= (SSL_CERTIFICATE_HDRLEN+cert_unit[cert_unit_cnt].cert_len);
+		unproc_cert += SSL_CERTIFICATE_HDRLEN+cert_unit[cert_unit_cnt].cert_len;
+        cert_unit_cnt++;
+
 	}
 	return cert_unit_cnt;	
 }
@@ -184,11 +179,10 @@ UCHAR ssl_Certificate(char *pcSslCertificateData, int iDataLen, ssl_stream *a_ss
 {
 	int iUnAnaCertLen = iDataLen;	
 	char *pcCurSslCertificateData = pcSslCertificateData;
-	int return_val = 0;
     while (iUnAnaCertLen > 0)
     {
         a_ssl_stream->stSSLCert->certlen = BtoL3BytesNum(pcCurSslCertificateData);        
-         if (a_ssl_stream->stSSLCert->certlen + SSL_CERTIFICATE_HDRLEN > iUnAnaCertLen)
+        if (a_ssl_stream->stSSLCert->certlen + SSL_CERTIFICATE_HDRLEN > iUnAnaCertLen)
         {
         	/**packet trunked is impossible**/
         	break;
@@ -198,10 +192,13 @@ UCHAR ssl_Certificate(char *pcSslCertificateData, int iDataLen, ssl_stream *a_ss
 		a_ssl_stream->p_output_buffer->p_data = pcCurSslCertificateData;
 		a_ssl_stream->p_output_buffer->data_size = a_ssl_stream->stSSLCert->certlen;
         a_ssl_stream->output_region_mask = SSL_CERTIFICATE_MASK;
-		return_val = ssl_doWithCertificate(&a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
+		int return_val = ssl_doWithCertificate(&a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
 		a_ssl_stream->p_output_buffer->p_data = NULL;
 		a_ssl_stream->p_output_buffer->data_size = 0;
-		if(SSL_RETURN_NORM != return_val)	return return_val;  
+		if(SSL_RETURN_NORM != return_val)	
+        {
+                return return_val;  
+        }
 		pcCurSslCertificateData += a_ssl_stream->stSSLCert->certlen;
         iUnAnaCertLen -= a_ssl_stream->stSSLCert->certlen; 
     }
@@ -237,7 +234,7 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 {
 	int iUnAnaCertLen = iDataLen;	
 	char *pcCurSslCertificateData = pcSslCertificateData;
-	int return_val = 0;
+	int return_val;
 	cert_chain_t cert_unit[CERT_MAXNUM];
 	int	cert_num = 0;
 	int cert_cnt = ssl_read_all_cert(pcCurSslCertificateData, iUnAnaCertLen, cert_unit, CERT_MAXNUM);
@@ -321,11 +318,10 @@ UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_strea
 }
 
 
-char *fn_pcGetElemType(unsigned char *pucId, int iIdLen, stSerialString_t *pastElemTypes)
+char *fn_pcGetElemType(const unsigned char *pucId, int iIdLen, stSerialString_t *pastElemTypes)
 {
     int iLoop = 0;
     int iInLoop = 0;
-    int iAlgIdLen = 0;
 
     if (NULL == pucId || iIdLen < 0 || NULL == pastElemTypes)
     {
@@ -334,7 +330,7 @@ char *fn_pcGetElemType(unsigned char *pucId, int iIdLen, stSerialString_t *pastE
 
     for  (iLoop = 0; NULL != pastElemTypes[iLoop].pcString; ++iLoop)
     {
-        iAlgIdLen = strlen((const char *)pastElemTypes[iLoop].aucSerial);
+        int iAlgIdLen = strlen((const char *)pastElemTypes[iLoop].aucSerial);
 		
         if (iAlgIdLen != iIdLen)
         {
@@ -371,13 +367,13 @@ UCHAR  fn_pGetSSLInfo_v1(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  stru
     char *pcCurElemData = NULL;
     char *pcCurExtItem = NULL;
     char acBuffer[8192] = {0};	
-    int iCurExtItemLen = 0;
+    //int iCurExtItemLen;   //20220318 cppcheck
     int uiLength  = 0;
-    int iCurItemLen = 0;
+    int iCurItemLen;  //20220318 cppcheck
     int iCurElemLen = 0;	
     int iExtenLen = 0;
     int iByteNum = 0;
-    int iShowFlag = 0;
+    int iShowFlag;
     int iLoop = 0;
     st_cert_t *stSSLCert = a_ssl_stream->stSSLCert;
 	char* issuer_info = NULL;
@@ -916,7 +912,7 @@ UCHAR  fn_pGetSSLInfo_v1(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  stru
     while (iExtenLen > 0)
     {
         /*current item length*/
-        iCurExtItemLen = fn_iSslDecodeTagLength(pcCurExtData, iExtenLen, &iByteNum);
+        int iCurExtItemLen = fn_iSslDecodeTagLength(pcCurExtData, iExtenLen, &iByteNum);
         if (iCurExtItemLen <= 0)
         {
         	return SSL_RETURN_UNNORM;
@@ -970,8 +966,8 @@ UCHAR  fn_pGetSSLInfo_v1(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  stru
 			/*get the last piece*/
             pcCurElemData = pcCurExtItem;
             iCurElemLen = uiLength; 
-			pcCurExtItem += uiLength;
-            iCurExtItemLen -= uiLength;			
+			//pcCurExtItem += uiLength;  //20220318 cppcheck
+            //iCurExtItemLen -= uiLength;	//20220318 cppcheck
 			/*DNS name*/
 			if((char)0x82 == pcCurElemData[0])
 			{
@@ -1002,7 +998,7 @@ UCHAR  fn_pGetSSLInfo_v1(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  stru
     }
     pcCurExtData = pcCurData + iByteNum + 1;
     iExtenLen = uiLength;
-    pcCurData += (iByteNum + 1 + uiLength);
+    //pcCurData += (iByteNum + 1 + uiLength);  //20220318 cppcheck
     iUnAnalyseLen -= (iByteNum + 1 + uiLength);
     if (iUnAnalyseLen <= 0)
     {
@@ -1028,7 +1024,7 @@ UCHAR  fn_pGetSSLInfo_v1(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  stru
             memcpy(stSSLCert->SSLFPAg, pcIdString, 1 + strlen((const char *)pcIdString));
     }
 
-    pcCurExtData += uiLength;
+    //pcCurExtData += uiLength; //20220318 cppcheck
     /**padding**/
     /**encrypted**/
 	
@@ -1066,136 +1062,133 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
 		return SSL_RETURN_NORM;
 	}
 	
-	if(NULL!=x509_handle)
-	{
-		/*version*/
-		int ver = X509_get_version(x509_handle);
-		if(ver>CERT_VER_MAXNUM || ver<0) goto cert_return;
-		memcpy(a_ssl_stream->stSSLCert->SSLVersion, 
-				g_astCertVersions[ver].pcString, 
-				1 + strlen((const char *)g_astCertVersions[ver].pcString));
+    /*version*/
+    int ver = X509_get_version(x509_handle);
+    if(ver>CERT_VER_MAXNUM || ver<0) goto cert_return;
+    memcpy(a_ssl_stream->stSSLCert->SSLVersion, 
+            g_astCertVersions[ver].pcString, 
+            1 + strlen((const char *)g_astCertVersions[ver].pcString));
 
-		/*serial num*/
-		serial = X509_get_serialNumber(x509_handle);
-		if (NULL != serial)
-    	{
-            a_ssl_stream->stSSLCert->SSLSerialNumLen = MIN(ASN1_STRING_length(serial), sizeof(a_ssl_stream->stSSLCert->SSLSerialNum));
-        	memcpy(a_ssl_stream->stSSLCert->SSLSerialNum, ASN1_STRING_get0_data(serial), a_ssl_stream->stSSLCert->SSLSerialNumLen);
-    	}
+    /*serial num*/
+    serial = X509_get_serialNumber(x509_handle);
+    if (NULL != serial)
+    {
+        a_ssl_stream->stSSLCert->SSLSerialNumLen = MIN(ASN1_STRING_length(serial), (int)(sizeof(a_ssl_stream->stSSLCert->SSLSerialNum)));
+        memcpy(a_ssl_stream->stSSLCert->SSLSerialNum, ASN1_STRING_get0_data(serial), a_ssl_stream->stSSLCert->SSLSerialNumLen);
+    }
 
-		/*SSL AgID*/
-        tsig_alg = X509_get0_tbs_sigalg(x509_handle);
-        X509_ALGOR_get0(&salg, NULL, NULL, tsig_alg);
-		OBJ_obj2txt(a_ssl_stream->stSSLCert->SSLAgID, sizeof(a_ssl_stream->stSSLCert->SSLAgID), salg, 1);
+    /*SSL AgID*/
+    tsig_alg = X509_get0_tbs_sigalg(x509_handle);
+    X509_ALGOR_get0(&salg, NULL, NULL, tsig_alg);
+    OBJ_obj2txt(a_ssl_stream->stSSLCert->SSLAgID, sizeof(a_ssl_stream->stSSLCert->SSLAgID), salg, 1);
 
-		/*SSL Issuer*/
-		issuer = X509_get_issuer_name(x509_handle);
-		if(NULL!=issuer)
-		{
-			X509_NAME_get_text_by_NID(issuer, NID_commonName, a_ssl_stream->stSSLCert->SSLIssuerCN, sizeof(a_ssl_stream->stSSLCert->SSLIssuerCN));
-			X509_NAME_get_text_by_NID(issuer, NID_organizationName, a_ssl_stream->stSSLCert->SSLIssuerO, sizeof(a_ssl_stream->stSSLCert->SSLIssuerO));
-			X509_NAME_get_text_by_NID(issuer, NID_organizationalUnitName, a_ssl_stream->stSSLCert->SSLIssuerU, sizeof(a_ssl_stream->stSSLCert->SSLIssuerU));
-			X509_NAME_get_text_by_NID(issuer, NID_localityName, a_ssl_stream->stSSLCert->SSLIssuerL, sizeof(a_ssl_stream->stSSLCert->SSLIssuerL));
-			X509_NAME_get_text_by_NID(issuer, NID_streetAddress, a_ssl_stream->stSSLCert->SSLIssuerS, sizeof(a_ssl_stream->stSSLCert->SSLIssuerS));
-			X509_NAME_get_text_by_NID(issuer, NID_stateOrProvinceName, a_ssl_stream->stSSLCert->SSLIssuerP, sizeof(a_ssl_stream->stSSLCert->SSLIssuerP));			
-			X509_NAME_get_text_by_NID(issuer, NID_countryName, a_ssl_stream->stSSLCert->SSLIssuerC, sizeof(a_ssl_stream->stSSLCert->SSLIssuerC));
-			
+    /*SSL Issuer*/
+    issuer = X509_get_issuer_name(x509_handle);
+    if(NULL!=issuer)
+    {
+        X509_NAME_get_text_by_NID(issuer, NID_commonName, a_ssl_stream->stSSLCert->SSLIssuerCN, sizeof(a_ssl_stream->stSSLCert->SSLIssuerCN));
+        X509_NAME_get_text_by_NID(issuer, NID_organizationName, a_ssl_stream->stSSLCert->SSLIssuerO, sizeof(a_ssl_stream->stSSLCert->SSLIssuerO));
+        X509_NAME_get_text_by_NID(issuer, NID_organizationalUnitName, a_ssl_stream->stSSLCert->SSLIssuerU, sizeof(a_ssl_stream->stSSLCert->SSLIssuerU));
+        X509_NAME_get_text_by_NID(issuer, NID_localityName, a_ssl_stream->stSSLCert->SSLIssuerL, sizeof(a_ssl_stream->stSSLCert->SSLIssuerL));
+        X509_NAME_get_text_by_NID(issuer, NID_streetAddress, a_ssl_stream->stSSLCert->SSLIssuerS, sizeof(a_ssl_stream->stSSLCert->SSLIssuerS));
+        X509_NAME_get_text_by_NID(issuer, NID_stateOrProvinceName, a_ssl_stream->stSSLCert->SSLIssuerP, sizeof(a_ssl_stream->stSSLCert->SSLIssuerP));			
+        X509_NAME_get_text_by_NID(issuer, NID_countryName, a_ssl_stream->stSSLCert->SSLIssuerC, sizeof(a_ssl_stream->stSSLCert->SSLIssuerC));
+        
 
-			snprintf(a_ssl_stream->stSSLCert->SSLIssuer,
-					 sizeof(a_ssl_stream->stSSLCert->SSLIssuer),
-					 "%s;%s;%s;%s;%s;%s;%s",
-					 a_ssl_stream->stSSLCert->SSLIssuerCN,
-					 a_ssl_stream->stSSLCert->SSLIssuerO,
-					 a_ssl_stream->stSSLCert->SSLIssuerU,
-					 a_ssl_stream->stSSLCert->SSLIssuerL,
-					 a_ssl_stream->stSSLCert->SSLIssuerS,
-					 a_ssl_stream->stSSLCert->SSLIssuerP,
-					 a_ssl_stream->stSSLCert->SSLIssuerC);
-		}
+        snprintf(a_ssl_stream->stSSLCert->SSLIssuer,
+                    sizeof(a_ssl_stream->stSSLCert->SSLIssuer),
+                    "%s;%s;%s;%s;%s;%s;%s",
+                    a_ssl_stream->stSSLCert->SSLIssuerCN,
+                    a_ssl_stream->stSSLCert->SSLIssuerO,
+                    a_ssl_stream->stSSLCert->SSLIssuerU,
+                    a_ssl_stream->stSSLCert->SSLIssuerL,
+                    a_ssl_stream->stSSLCert->SSLIssuerS,
+                    a_ssl_stream->stSSLCert->SSLIssuerP,
+                    a_ssl_stream->stSSLCert->SSLIssuerC);
+    }
 
-		/*SSL Subject*/
-		subject = X509_get_subject_name(x509_handle);
-		if(NULL!=subject)
-		{
-			X509_NAME_get_text_by_NID(subject, NID_commonName, a_ssl_stream->stSSLCert->SSLSubCN, sizeof(a_ssl_stream->stSSLCert->SSLSubCN));
-			X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
-			X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
+    /*SSL Subject*/
+    subject = X509_get_subject_name(x509_handle);
+    if(NULL!=subject)
+    {
+        X509_NAME_get_text_by_NID(subject, NID_commonName, a_ssl_stream->stSSLCert->SSLSubCN, sizeof(a_ssl_stream->stSSLCert->SSLSubCN));
+        X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
+        X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
 
 
-			X509_NAME_get_text_by_NID(subject, NID_commonName, a_ssl_stream->stSSLCert->SSLSubCN, sizeof(a_ssl_stream->stSSLCert->SSLSubCN));
-			X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
-			X509_NAME_get_text_by_NID(subject, NID_organizationalUnitName, a_ssl_stream->stSSLCert->SSLSubU, sizeof(a_ssl_stream->stSSLCert->SSLSubU));
-			X509_NAME_get_text_by_NID(subject, NID_localityName, a_ssl_stream->stSSLCert->SSLSubL, sizeof(a_ssl_stream->stSSLCert->SSLSubL));
-			X509_NAME_get_text_by_NID(subject, NID_streetAddress, a_ssl_stream->stSSLCert->SSLSubS, sizeof(a_ssl_stream->stSSLCert->SSLSubS));
-			X509_NAME_get_text_by_NID(subject, NID_stateOrProvinceName, a_ssl_stream->stSSLCert->SSLSubP, sizeof(a_ssl_stream->stSSLCert->SSLSubP));			
-			X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
-			
+        X509_NAME_get_text_by_NID(subject, NID_commonName, a_ssl_stream->stSSLCert->SSLSubCN, sizeof(a_ssl_stream->stSSLCert->SSLSubCN));
+        X509_NAME_get_text_by_NID(subject, NID_organizationName, a_ssl_stream->stSSLCert->SSLSubO, sizeof(a_ssl_stream->stSSLCert->SSLSubO));
+        X509_NAME_get_text_by_NID(subject, NID_organizationalUnitName, a_ssl_stream->stSSLCert->SSLSubU, sizeof(a_ssl_stream->stSSLCert->SSLSubU));
+        X509_NAME_get_text_by_NID(subject, NID_localityName, a_ssl_stream->stSSLCert->SSLSubL, sizeof(a_ssl_stream->stSSLCert->SSLSubL));
+        X509_NAME_get_text_by_NID(subject, NID_streetAddress, a_ssl_stream->stSSLCert->SSLSubS, sizeof(a_ssl_stream->stSSLCert->SSLSubS));
+        X509_NAME_get_text_by_NID(subject, NID_stateOrProvinceName, a_ssl_stream->stSSLCert->SSLSubP, sizeof(a_ssl_stream->stSSLCert->SSLSubP));			
+        X509_NAME_get_text_by_NID(subject, NID_countryName, a_ssl_stream->stSSLCert->SSLSubC, sizeof(a_ssl_stream->stSSLCert->SSLSubC));
+        
 
-			snprintf(a_ssl_stream->stSSLCert->SSLSub,
-					 sizeof(a_ssl_stream->stSSLCert->SSLSub),
-					 "%s;%s;%s;%s;%s;%s;%s",
-					 a_ssl_stream->stSSLCert->SSLSubCN,
-					 a_ssl_stream->stSSLCert->SSLSubO,
-					 a_ssl_stream->stSSLCert->SSLSubU,
-					 a_ssl_stream->stSSLCert->SSLSubL,
-					 a_ssl_stream->stSSLCert->SSLSubS,
-					 a_ssl_stream->stSSLCert->SSLSubP,
-					 a_ssl_stream->stSSLCert->SSLSubC);
-		}
+        snprintf(a_ssl_stream->stSSLCert->SSLSub,
+                    sizeof(a_ssl_stream->stSSLCert->SSLSub),
+                    "%s;%s;%s;%s;%s;%s;%s",
+                    a_ssl_stream->stSSLCert->SSLSubCN,
+                    a_ssl_stream->stSSLCert->SSLSubO,
+                    a_ssl_stream->stSSLCert->SSLSubU,
+                    a_ssl_stream->stSSLCert->SSLSubL,
+                    a_ssl_stream->stSSLCert->SSLSubS,
+                    a_ssl_stream->stSSLCert->SSLSubP,
+                    a_ssl_stream->stSSLCert->SSLSubC);
+    }
 
-		/*SSL Subject keyInfo*/
-		pkey = X509_get_pubkey(x509_handle);
-		if(pkey!=NULL)
-		{
-			int pkeyLen=0;			
-			a_ssl_stream->stSSLCert->SSLSubKeyLen = i2d_PublicKey(pkey, NULL);;
-			a_ssl_stream->stSSLCert->SSLSubKey = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stSSLCert->SSLSubKeyLen);		
-			pkeyLen = i2d_PublicKey(pkey, &(a_ssl_stream->stSSLCert->SSLSubKey)); //!!! point will be changed
-			a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;
+    /*SSL Subject keyInfo*/
+    pkey = X509_get_pubkey(x509_handle);
+    if(pkey!=NULL)
+    {			
+        a_ssl_stream->stSSLCert->SSLSubKeyLen = i2d_PublicKey(pkey, NULL);;
+        a_ssl_stream->stSSLCert->SSLSubKey = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stSSLCert->SSLSubKeyLen);		
+        i2d_PublicKey(pkey, &(a_ssl_stream->stSSLCert->SSLSubKey)); //!!! point will be changed
+        a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;
 
-			EVP_PKEY_free(pkey);
-		}		
-				
-		/*validity*/
-		start = X509_get_notBefore(x509_handle);
-		end = X509_get_notAfter(x509_handle);
-		sprintf(a_ssl_stream->stSSLCert->SSLFrom, "%s", start->data);
-		sprintf(a_ssl_stream->stSSLCert->SSLTo, "%s", end->data);				
+        EVP_PKEY_free(pkey);
+    }		
+            
+    /*validity*/
+    start = X509_get_notBefore(x509_handle);
+    end = X509_get_notAfter(x509_handle);
+    sprintf(a_ssl_stream->stSSLCert->SSLFrom, "%s", start->data);
+    sprintf(a_ssl_stream->stSSLCert->SSLTo, "%s", end->data);				
 
-		/*subject bak*/	
-		subjectAltNames = (GENERAL_NAMES*)X509_get_ext_d2i(x509_handle, NID_subject_alt_name, NULL, NULL);  
-		if(!subjectAltNames) goto cert_return;
-		cnt = sk_GENERAL_NAME_num(subjectAltNames);
-		if(cnt>0)
-		{			
-			a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)dictator_malloc(thread_seq, sizeof(st_san_t));
-			a_ssl_stream->stSSLCert->SSLSubAltName->san_array = (san_t*)dictator_malloc(thread_seq, cnt*sizeof(san_t));
-			memset(a_ssl_stream->stSSLCert->SSLSubAltName->san_array,0,cnt*sizeof(san_t));
-			a_ssl_stream->stSSLCert->SSLSubAltName->count = 0;
-			for (i = 0; i < cnt; i++)
-			{       
-				generalName = sk_GENERAL_NAME_value(subjectAltNames, i);
-				if(!generalName) goto cert_return;
-				if(GEN_DNS == generalName->type)
-				{
-					san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
-					if(ASN1_STRING_length(san_name)>0)
-					{
-						san = (char*)ASN1_STRING_get0_data(san_name);
-						snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san,
-								 sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san),
-								 "%s",
-								 san);						
-						a_ssl_stream->stSSLCert->SSLSubAltName->count++;
-					}	
-				}			
-			}
-		}
-		if(subjectAltNames)
-		{
-			GENERAL_NAMES_free(subjectAltNames);
-		}
-	}	
+    /*subject bak*/	
+    subjectAltNames = (GENERAL_NAMES*)X509_get_ext_d2i(x509_handle, NID_subject_alt_name, NULL, NULL);  
+    if(!subjectAltNames) goto cert_return;
+    cnt = sk_GENERAL_NAME_num(subjectAltNames);
+    if(cnt>0)
+    {			
+        a_ssl_stream->stSSLCert->SSLSubAltName = (st_san_t*)dictator_malloc(thread_seq, sizeof(st_san_t));
+        a_ssl_stream->stSSLCert->SSLSubAltName->san_array = (san_t*)dictator_malloc(thread_seq, cnt*sizeof(san_t));
+        memset(a_ssl_stream->stSSLCert->SSLSubAltName->san_array,0,cnt*sizeof(san_t));
+        a_ssl_stream->stSSLCert->SSLSubAltName->count = 0;
+        for (i = 0; i < cnt; i++)
+        {       
+            generalName = sk_GENERAL_NAME_value(subjectAltNames, i);
+            if(!generalName) goto cert_return;
+            if(GEN_DNS == generalName->type)
+            {
+                san_name = (ASN1_STRING*)GENERAL_NAME_get0_value(generalName, NULL);
+                if(ASN1_STRING_length(san_name)>0)
+                {
+                    san = (char*)ASN1_STRING_get0_data(san_name);
+                    snprintf(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san,
+                                sizeof(a_ssl_stream->stSSLCert->SSLSubAltName->san_array[a_ssl_stream->stSSLCert->SSLSubAltName->count].san),
+                                "%s",
+                                san);						
+                    a_ssl_stream->stSSLCert->SSLSubAltName->count++;
+                }	
+            }			
+        }
+    }
+    if(subjectAltNames)
+    {
+        GENERAL_NAMES_free(subjectAltNames);
+    }
+
 
 cert_return:
 	if (x509_handle != NULL) 

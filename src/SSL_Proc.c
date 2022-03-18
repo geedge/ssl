@@ -183,7 +183,7 @@ stSerialString_t g_astCipherSuit[] =
 
 
 
-int BtoL4BytesNum(char *pcData)
+int BtoL4BytesNum(const char *pcData)
 {
     int uiLength = 0;
     uiLength = pcData[0];
@@ -193,7 +193,7 @@ int BtoL4BytesNum(char *pcData)
     return uiLength;
 }
 
-int BtoL3BytesNum(char *pcData)
+int BtoL3BytesNum(const char *pcData)
 {
     int uiLength = 0;
     uiLength = pcData[0];
@@ -203,7 +203,7 @@ int BtoL3BytesNum(char *pcData)
     return uiLength;
 }
 
-int BtoL2BytesNum(char *pcData)
+int BtoL2BytesNum(const char *pcData)
 {
     int uiLength = 0;
     uiLength = pcData[0];
@@ -212,7 +212,7 @@ int BtoL2BytesNum(char *pcData)
     return uiLength;
 }
 
-int BtoL1BytesNum(char *pcData)
+int BtoL1BytesNum(const char *pcData)
 {
     int uiLength = 0;
     uiLength = pcData[0];
@@ -220,10 +220,10 @@ int BtoL1BytesNum(char *pcData)
     return uiLength;
 }
 
-char *fn_pcGetSuite(unsigned char *pucId, int iIdLen, const stSerialString_t *pastElemTypes)
+char *fn_pcGetSuite(const unsigned char *pucId, int iIdLen, const stSerialString_t *pastElemTypes)
 {
-    int iLoop = 0;
-    int iInLoop = 0;
+    int iLoop;
+    int iInLoop;
 
     if (NULL == pucId || iIdLen < 0 || NULL == pastElemTypes)
     {
@@ -258,22 +258,21 @@ const char* ssl_get_suite_name(unsigned char* suite_value, unsigned short suite_
 
 const char* ssl_get_version_name(unsigned short version)
 {	
-	int find_index = -1;
 	for(unsigned int i=0;pastSslVersions[i].uiValue!=0;i++)
 	{
 		if(pastSslVersions[i].uiValue==version)
 		{
-			find_index = (int)i;
-			break;
+			return (char*)pastSslVersions[i].pcString;
 		}
 	}
-	return (char*)pastSslVersions[find_index].pcString;
+	
+	return NULL;
 }
 
 int ssl_get_alpn_list(alpn_list_t* alpn_list, int alpn_size, st_ext_t* exts, unsigned short ext_num)
 {
-	int alpn_ext_len = 0;
-	int alpn_proto_len = 0;
+	int alpn_ext_len;
+	int alpn_proto_len;
 	int alpn_proto_num = 0;	
 	unsigned char* alpl = NULL;
 		
@@ -281,7 +280,7 @@ int ssl_get_alpn_list(alpn_list_t* alpn_list, int alpn_size, st_ext_t* exts, uns
 	{
 		if(exts[i].type == ALPN_EXT_TYPE)
 		{
-			alpn_ext_len = exts[i].len;
+			//alpn_ext_len = exts[i].len;
 			alpl = exts[i].data;
 			alpn_ext_len = BtoL2BytesNum((char *)alpl);
 			alpl +=2;
@@ -290,7 +289,7 @@ int ssl_get_alpn_list(alpn_list_t* alpn_list, int alpn_size, st_ext_t* exts, uns
 				alpn_proto_len = BtoL1BytesNum((char *)alpl);
 				alpl++;
 				alpn_ext_len -= 1;
-				alpn_list[alpn_proto_num].alpn_len = alpn_proto_len;
+				//alpn_list[alpn_proto_num].alpn_len = alpn_proto_len;
 				//memcpy(alpn_list[alpn_proto_num].alpn, alpl, alpn_proto_len);
 				alpn_list[alpn_proto_num].alpn = (char*)alpl;
 				alpn_list[alpn_proto_num].alpn_len = alpn_proto_len;
@@ -432,10 +431,10 @@ UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 				pstClientServerName->server_name_list_len -= pstClientServerName->server_name_len;
 				cur_data += pstClientServerName->server_name_len;				
 			}
-            if(NULL!=pstClientServerName) 
-			{
+			//if(NULL!=pstClientServerName) 
+			//{
 				dictator_free(thread_seq,pstClientServerName);
-			}                        
+			//}                        
 		}
 		else if((*a_ssl_stream)->stClientHello->exts[i].type == SESSION_TICKET_EXT_TYPE)
 		{

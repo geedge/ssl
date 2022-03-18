@@ -14,10 +14,10 @@
 extern "C" {
 #endif
 
-int    BtoL1BytesNum(char *pcData);
-int 	BtoL2BytesNum(char *pcData);
-int 	BtoL3BytesNum(char *pcData);
-int 	BtoL4BytesNum(char *pcData);
+int    BtoL1BytesNum(const char *pcData);
+int 	BtoL2BytesNum(const char *pcData);
+int 	BtoL3BytesNum(const char *pcData);
+int 	BtoL4BytesNum(const char *pcData);
 
 int 			ssl_protoRecg(char *pcData, int iDataLen);
 char *fn_pcGetSuite(unsigned char *pucId, int iIdLen, stSerialString_t *pastElemTypes);
