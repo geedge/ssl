@@ -38,4 +38,5 @@ add_test(NAME COPY_SO COMMAND sh -c "cp ${CMAKE_BINARY_DIR}/${lib_name}.so ${PRO
 add_test(NAME COPY_TEST_SO COMMAND sh -c "cp ${CMAKE_CURRENT_BINARY_DIR}/${lib_name}_test_plug.so ${PROTO_TEST_RUN_DIR}/plug/business/${lib_name}_test_plug/${lib_name}_test_plug.so")
 
 add_test(NAME RUN_SSL_TEST COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/ssl_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/ssl -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})
-
+add_test(NAME RUN_E21_BUG_E21_TEST COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/pcap/e21/ssl_e21_target_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/e21/ -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})
+add_test(NAME RUN_E21_BUG_XXG_TEST COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/pcap/xxg/ssl_xxg_target_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/xxg/ -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})
