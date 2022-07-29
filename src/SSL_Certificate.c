@@ -1140,12 +1140,24 @@ UCHAR  fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct 
     /*SSL Subject keyInfo*/
     pkey = X509_get_pubkey(x509_handle);
     if(pkey!=NULL)
-    {			
-        a_ssl_stream->stSSLCert->SSLSubKeyLen = i2d_PublicKey(pkey, NULL);;
-        a_ssl_stream->stSSLCert->SSLSubKey = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stSSLCert->SSLSubKeyLen);		
-        i2d_PublicKey(pkey, &(a_ssl_stream->stSSLCert->SSLSubKey)); //!!! point will be changed
-        a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;
-
+    {
+    	//https://www.openssl.org/docs/man3.0/man3/i2d_PublicKey.html
+        a_ssl_stream->stSSLCert->SSLSubKeyLen = i2d_PublicKey(pkey, NULL);
+		if(a_ssl_stream->stSSLCert->SSLSubKeyLen>0)
+		{
+	        a_ssl_stream->stSSLCert->SSLSubKey = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stSSLCert->SSLSubKeyLen);		
+	        int ret=i2d_PublicKey(pkey, &(a_ssl_stream->stSSLCert->SSLSubKey)); //!!! point will be changed
+	        if(ret>0)
+	        {
+	        	a_ssl_stream->stSSLCert->SSLSubKey = a_ssl_stream->stSSLCert->SSLSubKey-a_ssl_stream->stSSLCert->SSLSubKeyLen;
+	        }
+			else
+			{
+				dictator_free(thread_seq, (void *)a_ssl_stream->stSSLCert->SSLSubKey);
+				a_ssl_stream->stSSLCert->SSLSubKey=NULL;
+				a_ssl_stream->stSSLCert->SSLSubKeyLen=0;
+			}
+		}
         EVP_PKEY_free(pkey);
     }		
             
