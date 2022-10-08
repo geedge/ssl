@@ -62,6 +62,8 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
     cJSON *ctx = (cJSON *)*pme;
 	st_cert_t *cert=NULL;
     ssl_stream *a_ssl = (ssl_stream *)(session_info->app_info);
+    _ssl_ja3_info_t *ja3_info = NULL;
+    _ssl_ja3s_info_t *ja3s_info = NULL;
     
     if (session_info->session_state & SESSION_STATE_PENDING)
     {
@@ -80,23 +82,37 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 	        {
 	        	break;
 	        }
-			
-			if(a_ssl->stClientHello->server_name!=NULL && strlen((char *)(a_ssl->stClientHello->server_name))>0)
-			{
-				cJSON_AddStringToObject(ctx, (const char*)"ssl_sni", (const char*)(a_ssl->stClientHello->server_name));
-			}
 
-			if(a_ssl->stClientHello->encrypted_server_name.esni!=NULL)
-			{
-				cJSON_AddStringToObject(ctx, (const char*)"ssl_sni", "ESNI");
-			}
+		if (a_ssl->stClientHello->server_name != NULL && strlen((char *)(a_ssl->stClientHello->server_name)) > 0)
+		{
+			cJSON_AddStringToObject(ctx, (const char *)"ssl_sni", (const char *)(a_ssl->stClientHello->server_name));
+		}
 
-			if(ssl_get_version_name(a_ssl->stClientHello->client_ver))
-			{
-				cJSON_AddStringToObject(ctx, "ssl_client_version", ssl_get_version_name(a_ssl->stClientHello->client_ver));
-			}
-            break;
-        case SSL_CERTIFICATE_DETAIL:
+		if (a_ssl->stClientHello->encrypted_server_name.esni != NULL)
+		{
+			cJSON_AddStringToObject(ctx, (const char *)"ssl_sni", "ESNI");
+		}
+
+		if (ssl_get_version_name(a_ssl->stClientHello->client_ver))
+		{
+			cJSON_AddStringToObject(ctx, "ssl_client_version", ssl_get_version_name(a_ssl->stClientHello->client_ver));
+		}
+
+		ja3_info = ssl_get_ja3_fingerprint(a_tcp, (unsigned char *)a_tcp->ptcpdetail->pdata, (unsigned int)a_tcp->ptcpdetail->datalen, a_tcp->threadnum);
+		if (ja3_info != NULL && ja3_info->fp != NULL && ja3_info->fp_len > 0)
+		{
+			cJSON_AddStringToObject(ctx, "ssl_ja3_hash", ja3_info->fp);
+		}
+
+	    break;
+	case SSL_SERVER_HELLO:
+		ja3s_info = ssl_get_ja3s_fingerprint(a_tcp, (unsigned char *)a_tcp->ptcpdetail->pdata, (unsigned int)a_tcp->ptcpdetail->datalen, a_tcp->threadnum);
+		if (ja3s_info != NULL && ja3s_info->fp != NULL && ja3s_info->fp_len > 0)
+		{
+			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", ja3s_info->fp);
+		}
+		break;
+	case SSL_CERTIFICATE_DETAIL:
 			if (a_ssl==NULL || a_ssl->stSSLCert==NULL || a_tcp->curdir==DIR_C2S)
 			{
 				break;

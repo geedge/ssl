@@ -20,7 +20,7 @@ run_cppcheck_for_centos7:
     - mkdir build || true
     - cd build
     - cmake3 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-    - cppcheck --project=compile_commands.json --enable=all --error-exitcode=1 --suppress=unusedFunction --suppress=missingInclude --suppress=uselessAssignmentPtrArg --suppress=unreachableCode
+    - cppcheck --project=compile_commands.json --enable=all --error-exitcode=1 --suppress=unusedFunction --suppress=missingInclude --suppress=uselessAssignmentPtrArg --suppress=unreachableCode --suppress=unreadVariable --suppress=unmatchedSuppression
   tags:
     - share
 
@@ -31,7 +31,7 @@ run_cppcheck_for_centos8:
     - mkdir build || true
     - cd build
     - cmake3 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-    - cppcheck --project=compile_commands.json --enable=all --error-exitcode=1 --suppress=unusedFunction --suppress=missingInclude --suppress=uselessAssignmentPtrArg --suppress=unreachableCode
+    - cppcheck --project=compile_commands.json --enable=all --error-exitcode=1 --suppress=unusedFunction --suppress=missingInclude --suppress=uselessAssignmentPtrArg --suppress=unreachableCode --suppress=unreadVariable --suppress=unmatchedSuppression
   tags:
     - share
 

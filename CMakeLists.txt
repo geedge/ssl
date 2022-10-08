@@ -28,6 +28,23 @@ elseif(ASAN_OPTION MATCHES "THREAD")
 endif()
 # end of for ASAN
 
+find_program(CMAKE_CXX_CPPCHECK NAMES cppcheck)
+if (CMAKE_CXX_CPPCHECK)
+    list(
+        APPEND CMAKE_CXX_CPPCHECK 
+            "--enable=all"
+            "--error-exitcode=1"
+            "--suppress=unusedFunction"
+            "--suppress=missingInclude"
+            "--suppress=uselessAssignmentPtrArg"
+            "--suppress=unmatchedSuppression"
+            "--suppress=unreadVariable"
+	    "--suppress=unreachableCode"
+    )
+  message("cppcheck start...")
+else()
+  message(FATAL_ERROR "Could not find the program cppcheck.")
+endif()
 
 include_directories(/opt/MESA/include/MESA/)
 include_directories(./src/inc/)

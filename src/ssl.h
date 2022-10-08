@@ -188,7 +188,7 @@ typedef struct _san_t
 typedef struct _st_san_t
 {
 	int 					count;
-	san_t* 					san_array; 					//Ö¸ÕëÊı×é
+	san_t* 					san_array; 					//Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }st_san_t;
 
 typedef struct _st_cert_t
@@ -266,34 +266,34 @@ typedef struct _ssl_stream_t
 	unsigned char 				first_pkt_flag;	
 }ssl_stream;
 
-/*ssl_read_all_certÖĞµÄ½á¹¹Ìå*/
+/*ssl_read_all_certï¿½ĞµÄ½á¹¹ï¿½ï¿½*/
 typedef struct cert_chain_s
 {
      char* 						cert;
 	 uint32_t					cert_len;
 }cert_chain_t;
 
-/*ssl_get_alpn_list?D¦Ì??¨¢11¨¬?*/
+/*ssl_get_alpn_list?Dï¿½ï¿½??ï¿½ï¿½11ï¿½ï¿½?*/
 typedef struct alpn_list_s
 {
 	 char*						alpn;			//pointer to exts
 	 uint32_t					alpn_len;
 }alpn_list_t;
 
-/*ssl_read_specific_certÖĞcert_typeµÄ²ÎÊı*/
-#define CERT_TYPE_INDIVIDUAL		0  //¸öÈËÖ¤Êé
-#define CERT_TYPE_ROOT				1  //¸ùÖ¤Êé
-#define CERT_TYPE_MIDDLE			2  //ÖĞ¼äÖ¤Êé£¬¸öÈËÖ¤ÊéµÄÉÏ¼¶Ö¤Êé
-#define CERT_TYPE_CHAIN				3  //ÆäËû: ¸ñÊ½[len(3bytes)+cert+len(3bytes)+certlen(3bytes)+cert......]
+/*ssl_read_specific_certï¿½ï¿½cert_typeï¿½Ä²ï¿½ï¿½ï¿½*/
+#define CERT_TYPE_INDIVIDUAL		0  //ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½
+#define CERT_TYPE_ROOT				1  //ï¿½ï¿½Ö¤ï¿½ï¿½
+#define CERT_TYPE_MIDDLE			2  //ï¿½Ğ¼ï¿½Ö¤ï¿½é£¬ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½Ï¼ï¿½Ö¤ï¿½ï¿½
+#define CERT_TYPE_CHAIN				3  //ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½Ê½[len(3bytes)+cert+len(3bytes)+certlen(3bytes)+cert......]
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*return : chain ¸öÊı, °´ÕÕ´Ó¸öÈËÖ¤Êéµ½¸ùÖ¤ÊéµÄË³Ğò´æ´¢*/
+/*return : chain ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½Õ´Ó¸ï¿½ï¿½ï¿½Ö¤ï¿½éµ½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½Ë³ï¿½ï¿½æ´¢*/
 int ssl_read_all_cert(const char* conj_cert_buf, uint32_t conj_buflen, cert_chain_t* cert_unit, uint32_t unit_size);
 
-/*return :  1 ´æÔÚ£¬0 ²»´æÔÚ*/
+/*return :  1 ï¿½ï¿½ï¿½Ú£ï¿½0 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint8_t cert_type, char** cert, uint32_t* cert_len);
 
 /*Obtain suite name like "TLS_RSA_WITH_AES_128_CBC_SHA" by suite_value; Each suite should be 2 bytes*/
@@ -320,8 +320,15 @@ struct _ssl_ja3_info_t
 	char *fp;
 };
 
+struct _ssl_ja3s_info_t
+{
+	int fp_len;
+	char *fp;
+};
+
 int ssl_ja3_init(void);
 struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq);
+struct _ssl_ja3s_info_t *ssl_get_ja3s_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq);
 
 #ifdef __cplusplus
 }
