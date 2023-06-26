@@ -83,9 +83,13 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 	        	break;
 	        }
 
-		if (a_ssl->stClientHello->server_name != NULL && strlen((char *)(a_ssl->stClientHello->server_name)) > 0)
+		if (strlen((char *)(a_ssl->stClientHello->server_name)) > 0)
 		{
 			cJSON_AddStringToObject(ctx, (const char *)"ssl_sni", (const char *)(a_ssl->stClientHello->server_name));
+		}
+		if (a_ssl->stClientHello->encrypt_chello != NULL)
+		{
+			cJSON_AddStringToObject(ctx, (const char *)"ssl_ech", "1");
 		}
 
 		if (a_ssl->stClientHello->encrypted_server_name.esni != NULL)

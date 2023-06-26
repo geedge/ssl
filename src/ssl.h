@@ -106,6 +106,7 @@ typedef struct _st_esni_t
 #define SERVER_NAME_OTHER_TYPE 				0x0008
 #define SESSION_TICKET_EXT_TYPE 			0x0023
 #define ENCRPTED_SERVER_NAME_EXT_TYPE		0xFFCE
+#define ENCRPTED_CLIENT_HELLO_EXT_TYPE		0xFE0D
 
 
 /*important extension in clientHello: alpn(application_layer_protocol_negotiation) */
@@ -135,6 +136,7 @@ typedef struct _st_client_hello_t
 	unsigned char 				server_name[512];  	// server_name = host_name+...
 	st_session_tciket_t 		session_ticket;	
 	st_esni_t 					encrypted_server_name;	
+	st_ext_t					*encrypt_chello;
 }st_client_hello_t;
 
 //#############################################client hello end

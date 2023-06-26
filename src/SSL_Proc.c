@@ -479,6 +479,10 @@ UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 				iUnAnaHelloLen -= (ESNILEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len);
 			}
 		}		
+		else if((*a_ssl_stream)->stClientHello->exts[i].type == ENCRPTED_CLIENT_HELLO_EXT_TYPE)
+		{
+			(*a_ssl_stream)->stClientHello->encrypt_chello = &(*a_ssl_stream)->stClientHello->exts[i];
+		}
 	}	
 	
 	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
