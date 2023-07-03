@@ -1,37 +1,7 @@
-/*
- * SSL_Certificate.h
- *
- *  Created on: 2013-5-8
- *      Author: lis
- */
-
-#ifndef SSL_CERTIFICATE_H_
-#define SSL_CERTIFICATE_H_
-
+#pragma once
 
 #define	CERT_TYPE_MAXNUM			16
-
 //#define SCT_OID 					1.3.6.1.4.1.11129.2.4.2
 #define SCT_OID 					1
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-char *fn_pcGetElemType(unsigned char *pucId, int iIdLen, stSerialString_t *pastElemTypes);
-
-UCHAR fn_pGetSSLInfo(char *pcCert, int iLen, ssl_stream *a_ssl_stream,  struct streaminfo *a_tcp,
-		        unsigned long long region_flag, int thread_seq, void *a_packet);
-
-UCHAR ssl_AnalyseCertificate(char *pcSslCertificateData, int iDataLen, ssl_stream *a_ssl_stream, struct streaminfo* a_tcp,
-		                      unsigned long long region_flag, int thread_seq, void* a_packet);
-UCHAR ssl_Certificate(char *pcSslCertificateData, int iDataLen, ssl_stream *a_ssl_stream, struct streaminfo* a_tcp,
-		                      unsigned long long region_flag, int thread_seq, void* a_packet);
-
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* SSL_CERTIFICATE_H_ */
+int x509_parse_certificate_detail(struct ssl_certificate *certificate, char *cert_payload, int cert_payload_len, int thread_seq);

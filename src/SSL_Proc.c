@@ -13,28 +13,9 @@
 #include "SSL_Message.h"
 #include "ssl.h"
 #include "SSL_Proc.h"
-#include "SSL_Common.h"
-
-
-//debug
-#define PRINTF_CLIENT_HELLO		0
-
-extern ssl_prog_runtime_parameter_t 	g_ssl_prog_para;
-
-const stValueString_t pastSslVersions[] =
-{
-    { DTLSV1_0_VERSION, 	"DTLS1.0" },
-    { DTLSV1_0_VERSION_NOT, "DTLS1.0(OpenSSL pre 0.9.8f)" },  
-    { TLSV1_2_VERSION, 		"TLS1.2" },
-    { TLSV1_1_VERSION, 		"TLS1.1" },
-    { TLSV1_0_VERSION, 		"TLS1.0" },
-    { SSLV3_VERSION, 		"SSL3.0" },
-    { SSLV2_VERSION, 		"SSL2.0" },
-    { UNKNOWN_VERSION, 		NULL }
-};
 
 /*
-const stSerialString_t g_astCipherSuit[] =
+const struct ssl_serial_string g_astCipherSuit[] =
 {
     {{0X00, 0X2f}, "TLS_RSA_WITH_AES_128_CBC_SHA"},
     {{0X00, 0X35}, "TLS_RSA_WITH_AES_256_CBC_SHA"},
@@ -53,7 +34,7 @@ const stSerialString_t g_astCipherSuit[] =
 };
 */
 
-stSerialString_t g_astCipherSuit[] =
+struct ssl_serial_string g_astCipherSuit[] =
 {
 	{{0xC0, 0X30}, "ECDHE-RSA-AES256-GCM-SHA384"},	
 	{{0xC0, 0X2C}, "ECDHE-ECDSA-AES256-GCM-SHA384"},	
@@ -220,7 +201,7 @@ int BtoL1BytesNum(const char *pcData)
     return uiLength;
 }
 
-char *fn_pcGetSuite(const unsigned char *pucId, int iIdLen, const stSerialString_t *pastElemTypes)
+char *fn_pcGetSuite(const unsigned char *pucId, int iIdLen, const struct ssl_serial_string *pastElemTypes)
 {
     int iLoop;
     int iInLoop;
@@ -230,11 +211,11 @@ char *fn_pcGetSuite(const unsigned char *pucId, int iIdLen, const stSerialString
         return NULL;
     }
 
-    for  (iLoop = 0; NULL != pastElemTypes[iLoop].pcString; ++iLoop)
+    for  (iLoop = 0; NULL != pastElemTypes[iLoop].string; ++iLoop)
     {
         for (iInLoop = 0; iInLoop < iIdLen; ++iInLoop)
         {
-            if (pucId[iInLoop] != pastElemTypes[iLoop].aucSerial[iInLoop])
+            if (pucId[iInLoop] != pastElemTypes[iLoop].serial[iInLoop])
             {
                 //continue;
 				break;
@@ -243,7 +224,7 @@ char *fn_pcGetSuite(const unsigned char *pucId, int iIdLen, const stSerialString
 
         if (iInLoop == iIdLen)
         {
-            return (char *)(pastElemTypes[iLoop].pcString);
+            return (char *)(pastElemTypes[iLoop].string);
         }
     }
 
@@ -253,440 +234,52 @@ char *fn_pcGetSuite(const unsigned char *pucId, int iIdLen, const stSerialString
 const char* ssl_get_suite_name(unsigned char* suite_value, unsigned short suite_len)
 {
 	if(suite_value==NULL) return NULL;
-	return fn_pcGetSuite((unsigned char *)suite_value, suite_len, (stSerialString_t*)&g_astCipherSuit);
+	return fn_pcGetSuite((unsigned char *)suite_value, suite_len, (struct ssl_serial_string*)&g_astCipherSuit);
 }
 
-const char* ssl_get_version_name(unsigned short version)
-{	
-	for(unsigned int i=0;pastSslVersions[i].uiValue!=0;i++)
-	{
-		if(pastSslVersions[i].uiValue==version)
-		{
-			return (char*)pastSslVersions[i].pcString;
-		}
-	}
-	
-	return NULL;
-}
-
-int ssl_get_alpn_list(alpn_list_t* alpn_list, int alpn_size, st_ext_t* exts, unsigned short ext_num)
-{
-	int alpn_ext_len;
-	int alpn_proto_len;
-	int alpn_proto_num = 0;	
-	unsigned char* alpl = NULL;
-		
-	for(int i=0; i<ext_num; i++)
-	{
-		if(exts[i].type == ALPN_EXT_TYPE)
-		{
-			//alpn_ext_len = exts[i].len;
-			alpl = exts[i].data;
-			alpn_ext_len = BtoL2BytesNum((char *)alpl);
-			alpl +=2;
-			while(alpn_ext_len>0 && alpn_proto_num<alpn_size)
-			{
-				alpn_proto_len = BtoL1BytesNum((char *)alpl);
-				alpl++;
-				alpn_ext_len -= 1;
-				//alpn_list[alpn_proto_num].alpn_len = alpn_proto_len;
-				//memcpy(alpn_list[alpn_proto_num].alpn, alpl, alpn_proto_len);
-				alpn_list[alpn_proto_num].alpn = (char*)alpl;
-				alpn_list[alpn_proto_num].alpn_len = alpn_proto_len;
-				alpn_ext_len -= alpn_proto_len;
-				alpl += alpn_proto_len;
-				alpn_proto_num++;
-			}
-			break;
-		}		
-	}
-	return alpn_proto_num;
-}
-
-UCHAR ssl_doWithVersion(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{	
-	UCHAR return_val = SSL_RETURN_NORM;	
-	if(!(g_ssl_prog_para.ssl_interested_region_flag&SSL_VERSION))	return return_val;
-	
-	int find_index = -1;
-	unsigned int i=0;
-	for(i=0;pastSslVersions[i].uiValue!=0;i++)
-	{
-		if(pastSslVersions[i].uiValue==(*a_ssl_stream)->uiSslVersion)
-		{
-			find_index = (int)i;
-			break;
-		}
-	}	
-	if(-1!=find_index)
-	{
-		(*a_ssl_stream)->output_region_mask = SSL_VERSION_MASK;
-		(*a_ssl_stream)->p_output_buffer->p_data = (char*)pastSslVersions[find_index].pcString;
-		(*a_ssl_stream)->p_output_buffer->data_size = strlen(pastSslVersions[find_index].pcString);
-		return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-		(*a_ssl_stream)->p_output_buffer->p_data = NULL;
-		(*a_ssl_stream)->p_output_buffer->data_size = 0;
-		(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	}
-	return return_val;
-}
-
-UCHAR ssl_doWithNewSessionTicket(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-										unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	(*a_ssl_stream)->output_region_mask = SSL_NEW_SESSION_TICKET_MASK;
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-	(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-UCHAR ssl_doWithApplicationData(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	(*a_ssl_stream)->output_region_mask = SSL_APPLICATION_DATA_MASK;
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-	(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-
-UCHAR ssl_doWithAlert(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	(*a_ssl_stream)->output_region_mask = SSL_ALERT_MASK;
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-	(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-
-UCHAR ssl_doWithCertificate(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-	(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-UCHAR ssl_doWithCertificateDetail(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	(*a_ssl_stream)->output_region_mask = SSL_CERTIFICATE_DETAIL_MASK;
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-	(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	(*a_ssl_stream)->output_region_mask = SSL_CLIENT_HELLO_MASK;
-
-	/*parse extionsion server_name*/
-	int i=0;
-	for(i=0; i<(*a_ssl_stream)->stClientHello->ext_num; i++)
-	{
-		if((*a_ssl_stream)->stClientHello->exts[i].type == SERVER_NAME_EXT_TYPE)
-		{
-			st_client_server_name_t* pstClientServerName = (st_client_server_name_t*)dictator_malloc(thread_seq,sizeof(st_client_server_name_t));
-			unsigned char* cur_data = NULL;			
-			unsigned char servernamelen = 0;
-			pstClientServerName->server_name_list_len =  (*a_ssl_stream)->stClientHello->exts[i].len;
-			cur_data =  (*a_ssl_stream)->stClientHello->exts[i].data;
-			
-			pstClientServerName->server_name_list_len -= sizeof(pstClientServerName->server_name_list_len);
-			cur_data += sizeof(pstClientServerName->server_name_list_len);
-
-			/*3=sizeof(pstClientServerName.server_name_type)+sizeof(pstClientServerName.server_name_len)*/
-			while(pstClientServerName->server_name_list_len>3)
-			{				
-				pstClientServerName->server_name_type = BtoL1BytesNum((char *)cur_data);
-				pstClientServerName->server_name_len = BtoL2BytesNum((char *)(cur_data+1));
-				pstClientServerName->server_name_list_len -= 3;
-				cur_data += 3;
-				/*have data*/
-				if(((pstClientServerName->server_name_type == SERVER_NAME_HOST_TYPE))&&
-                            pstClientServerName->server_name_len>0&&
-                            pstClientServerName->server_name_list_len>=pstClientServerName->server_name_len)
-				{
-					pstClientServerName->server_name_data = cur_data;			
-					//if(!first_server_name)
-					{
-						memcpy((*a_ssl_stream)->stClientHello->server_name,
-							   pstClientServerName->server_name_data, 
-							   pstClientServerName->server_name_len);
-						servernamelen = strlen((char*)(*a_ssl_stream)->stClientHello->server_name);
-						(*a_ssl_stream)->stClientHello->server_name[servernamelen] = '\0';
-						//printf("====servername:%s\n", (*a_ssl_stream)->stClientHello->server_name);						  
-                        break;
-					}                               
-				}
-				pstClientServerName->server_name_list_len -= pstClientServerName->server_name_len;
-				cur_data += pstClientServerName->server_name_len;				
-			}
-			//if(NULL!=pstClientServerName) 
-			//{
-				dictator_free(thread_seq,pstClientServerName);
-			//}                        
-		}
-		else if((*a_ssl_stream)->stClientHello->exts[i].type == SESSION_TICKET_EXT_TYPE)
-		{
-			(*a_ssl_stream)->stClientHello->session_ticket.ticketlen = (*a_ssl_stream)->stClientHello->exts[i].len;
-			(*a_ssl_stream)->stClientHello->session_ticket.ticket =  (*a_ssl_stream)->stClientHello->exts[i].data;
-			//printf("====session ticket:%d\n", (*a_ssl_stream)->stClientHello->session_ticket.ticketlen);
-		}
-		else if((*a_ssl_stream)->stClientHello->exts[i].type == ENCRPTED_SERVER_NAME_EXT_TYPE)
-		{			
-			char* cur_data = (char*)(*a_ssl_stream)->stClientHello->exts[i].data;	
-			int   iUnAnaHelloLen = (*a_ssl_stream)->stClientHello->exts[i].len;
-			if(iUnAnaHelloLen>SUITE_VALUELEN)
-			{
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.suite_value = (unsigned char *)dictator_malloc(thread_seq,SUITE_VALUELEN);
-				memcpy((*a_ssl_stream)->stClientHello->encrypted_server_name.suite_value, cur_data, SUITE_VALUELEN);
-				cur_data += SUITE_VALUELEN;
-				iUnAnaHelloLen -= SUITE_VALUELEN;
-			}
-			if(iUnAnaHelloLen>KEY_EXCHANGELEN_LEN)
-			{
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange_group = (unsigned short)BtoL2BytesNum(cur_data);
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange_len = (unsigned short)BtoL2BytesNum(cur_data+2);
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange = (unsigned char *)dictator_malloc(thread_seq,(*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange_len);
-				memcpy((*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange, cur_data+KEY_EXCHANGELEN_LEN, (*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange_len);
-				cur_data += (KEY_EXCHANGELEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange_len);
-				iUnAnaHelloLen -= (KEY_EXCHANGELEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.key_exchange_len);
-			}
-			if(iUnAnaHelloLen>RECORD_DIGESTLEN_LEN)
-			{
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest_len= (unsigned short)BtoL2BytesNum(cur_data);				
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest = (unsigned char *)dictator_malloc(thread_seq,(*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest_len);
-				memcpy((*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest, cur_data+RECORD_DIGESTLEN_LEN, (*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest_len);
-				cur_data += (RECORD_DIGESTLEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest_len);
-				iUnAnaHelloLen -= (RECORD_DIGESTLEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.record_digest_len);
-			}
-			if(iUnAnaHelloLen>ESNILEN_LEN)
-			{
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len = (unsigned short)BtoL2BytesNum(cur_data);				
-				(*a_ssl_stream)->stClientHello->encrypted_server_name.esni = (unsigned char *)dictator_malloc(thread_seq,(*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len);
-				memcpy((*a_ssl_stream)->stClientHello->encrypted_server_name.esni, cur_data+ESNILEN_LEN, (*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len);
-				cur_data += (ESNILEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len);
-				iUnAnaHelloLen -= (ESNILEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len);
-			}
-		}		
-		else if((*a_ssl_stream)->stClientHello->exts[i].type == ENCRPTED_CLIENT_HELLO_EXT_TYPE)
-		{
-			(*a_ssl_stream)->stClientHello->encrypt_chello = &(*a_ssl_stream)->stClientHello->exts[i];
-		}
-	}	
-	
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-    (*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-void print_sni(ssl_stream **a_ssl_stream)
-{
-#if PRINTF_CLIENT_HELLO
-	//printf("server_name:%s\n",(*a_ssl_stream)->stClientHello->server_name);	
-	FILE*				pFile					= NULL;
-	time_t			currTime;
-	struct tm		 *now;
-	char		 strTime[32];
-	char		 logTime[32];
-	char filename[64] = {0};
-	time(&currTime);
-	now = localtime(&currTime);
-	memset(strTime, 0, sizeof(strTime) );
-	memset(logTime, 0, sizeof(logTime) );
-	strftime(strTime, sizeof(strTime), "%Y-%m-%d %H:%M:%S", now);
-	strftime(logTime, sizeof(logTime), "%Y-%m-%d", now);
-	strcpy(filename, "./ssl_log/ssl_server_name_log_"); 
-	strcat(filename, logTime);
-	if(((pFile = fopen(filename, "a+"))!=NULL))
-	{				
-		fprintf(pFile,"%s===%s\n",strTime, (*a_ssl_stream)->stClientHello->server_name);
-		fclose(pFile);	
-	}				
-#endif
-
-}
-
-UCHAR ssl_doWithServerHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-						unsigned long long region_flag, int thread_seq, void *a_packet)
-{
-	UCHAR return_val = SSL_RETURN_NORM;	
-	(*a_ssl_stream)->output_region_mask = SSL_SERVER_HELLO_MASK;
-	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-	(*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
-	return return_val;
-}
-
-int ssl_getLinkState(ssl_stream *a_ssl_stream)
+int ssl_get_link_state(struct ssl_runtime_context *ssl_context)
 {
 	UCHAR state = 0;
-	if(SSL_FLASE==(a_ssl_stream)->link_state)
+	if(SSL_FLASE==ssl_context->link_state)
 	{
-		if(SSL_TRUE==(a_ssl_stream)->over_flag)
+		if(SSL_TRUE==ssl_context->over_flag)
 			state = SESSION_STATE_CLOSE | SESSION_STATE_PENDING;
 		else
 			state = SESSION_STATE_PENDING;
 	}
 	else
 	{
-		if(SSL_TRUE==(a_ssl_stream)->over_flag)
+		if(SSL_TRUE==ssl_context->over_flag)
 		{
 			state = SESSION_STATE_CLOSE;
 		}
 		else
+		{
 			state = SESSION_STATE_DATA;
-	}
-	(a_ssl_stream)->link_state = SSL_TRUE;
-	return state;
-}/*ssl_getLinkState*/
-
-UCHAR ssl_callPlugins(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
-		 				  unsigned long long region_flag, int thread_seq, void *a_packet)
-{	
-	stSessionInfo session_info;
-	region_flag = (region_flag >> (*a_ssl_stream)->output_region_mask) % 2;
-	
-	if( SSL_TRUE==region_flag || (*a_ssl_stream)->over_flag==SSL_TRUE )
-	{
-		if (PROT_STATE_DROPME != (*a_ssl_stream)->business->return_value)
-		{		
-			session_info.plugid = g_ssl_prog_para.ssl_plugid;
-			session_info.prot_flag = (((unsigned long long)1)<<(*a_ssl_stream)->output_region_mask);			
-			session_info.session_state = ssl_getLinkState(*a_ssl_stream) ;			
-			session_info.app_info =  (void*)(*a_ssl_stream);
-			session_info.buf = (*a_ssl_stream)->p_output_buffer->p_data;
-			session_info.buflen = (*a_ssl_stream)->p_output_buffer->data_size;
-		   (*a_ssl_stream)->business->return_value = PROT_PROCESS(&session_info,
-											&((*a_ssl_stream)->business->param),
-											thread_seq,a_tcp, a_packet);
 		}
 	}
-	/*
-	if(PROT_STATE_DROPME == (*a_ssl_stream)->business->return_value)
+	
+	ssl_context->link_state = SSL_TRUE;
+
+	return state;
+}
+
+void ssl_call_plugins(const struct streaminfo *a_tcp, struct ssl_runtime_context *ssl_context, char *buff, int buff_len, enum ssl_interested_region output_region_mask, int thread_seq, const void *a_packet)
+{	
+	stSessionInfo session_info;
+	unsigned long long region_flag = (g_ssl_runtime_para.ssl_interested_region_flag >> output_region_mask) % 2;
+	
+	if(SSL_TRUE==region_flag || ssl_context->over_flag==SSL_TRUE )
 	{
-		return PROT_STATE_DROPME;
+		if (PROT_STATE_DROPME != ssl_context->business.return_value)
+		{		
+			session_info.plugid = g_ssl_runtime_para.ssl_plugid;
+			session_info.prot_flag = (((unsigned long long)1)<<output_region_mask);
+			session_info.session_state = ssl_get_link_state(ssl_context);
+			session_info.app_info =  (void*)(&ssl_context->stream);
+			session_info.buf=buff;
+			session_info.buflen=buff_len;
+			ssl_context->business.return_value=PROT_PROCESS(&session_info, &(ssl_context->business.param), thread_seq, (struct streaminfo *)a_tcp, a_packet);
+		}
 	}
-	*/
-	return SSL_RETURN_NORM;
-}
-
-/*
-Input:       pLenBytes  return the bytes of the length domain
-Return:     length of the tlv structure
-*/
-int fn_iSslDecodeTagLength(char *pcTlvData, int iDataLen, int *pLenBytes)
-{
-    unsigned int uiLength = 0;
-    int iLoop = 0;
-    unsigned char *pucTlvData = (unsigned char *)pcTlvData;
-    if (NULL == pucTlvData || iDataLen < 2 || NULL == pLenBytes)
-    {
-        return -1;
-    }
-
-    if (pucTlvData[1] > 0x80)
-    {
-        *pLenBytes = pucTlvData[1] & 0x7f;
-    }
-    else if (pucTlvData[1] == 0x80)
-    {
-        *pLenBytes = 1;
-        return 0;
-    }
-    else
-    {
-        *pLenBytes = 1;
-        return pucTlvData[1];
-    }
-
-    if (*pLenBytes > iDataLen - 2 || *pLenBytes > 4)
-    {
-        return -1;
-    }
-
-    for (iLoop = 0; iLoop < *pLenBytes; ++iLoop)
-    {
-        uiLength = (uiLength << 8) + pucTlvData[2+iLoop];
-    }
-
-    *pLenBytes += 1;
-
-    return uiLength;
-}
-
-
-void fn_vMemCpy(char *pcDst, int iMaxDstLen, char *pcSrc, int iSrcLen)
-{
-    char *pcBuff = NULL;
-    int iLoop = 0;
-    if (NULL == pcDst || NULL == pcSrc || pcDst == pcSrc || iMaxDstLen < iSrcLen)
-    {
-        return;
-    }
-
-    if (pcDst < pcSrc || pcDst > pcSrc + iSrcLen)
-    {
-        pcBuff = pcSrc;
-    }
-    else
-    {
-        pcBuff = (char *)malloc(sizeof(char)*iSrcLen);
-        if (NULL == pcBuff)
-        {
-            return;
-        }
-
-        memcpy(pcBuff, pcSrc, iSrcLen);
-    }
-
-    for (iLoop = 0; iLoop < iSrcLen; ++iLoop)
-    {
-        pcDst[iLoop] = pcSrc[iLoop];
-    }
-
-    if (pcBuff != pcSrc)
-    {
-        free(pcBuff);
-    }
-
-    return;
-}
-
-void fn_vPrintNum(char *pcDstBuff, unsigned char ucNum)
-{
-    if (NULL == pcDstBuff)
-    {
-        return;
-    }
-
-    if ((((ucNum&0xf0)>>4)&0x0f) < 0x0a)
-    {
-        pcDstBuff[0] = 0x30 + (((ucNum&0xf0)>>4)&0x0f);
-    }
-    else
-    {
-        pcDstBuff[0] = 0x61 - 0x0a + (((ucNum&0xf0)>>4)&0x0f);
-    }
-
-    if ((ucNum&0x0f) < 0x0a)
-    {
-        pcDstBuff[1] = 0x30 + (ucNum&0x0f);
-    }
-    else
-    {
-        pcDstBuff[1] = 0x61 - 0x0a + (ucNum&0x0f);
-    }
-
-    pcDstBuff[2] = '\0';
-    return;
 }

@@ -105,6 +105,7 @@
 	"ssl_cert_AgID": "1.2.840.113549.1.1.11",
 	"ssl_cert_From": "210928164609Z",
 	"ssl_cert_To": "221030164608Z",
+	"ssl_cert_SSLFPAg":	"1.2.840.113549.1.1.11",
 	"name": "SSL_RESULT_13"
 },
 {
@@ -130,6 +131,7 @@
 	"ssl_cert_AgID": "1.2.840.113549.1.1.11",
 	"ssl_cert_From": "210928164609Z",
 	"ssl_cert_To": "221030164608Z",
+	"ssl_cert_SSLFPAg":	"1.2.840.113549.1.1.11",
 	"name": "SSL_RESULT_14"
 },
 {

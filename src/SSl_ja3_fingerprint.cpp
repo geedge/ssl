@@ -380,14 +380,13 @@ typedef struct bsb
     unsigned char *end;
 } BSB;
 
-typedef struct _ssl_fingerprint
+struct ssl_fingerprint
 {
-	struct _ssl_ja3_info_t *ja3_info;
-	struct _ssl_ja3s_info_t *ja3s_info;
-}ssl_fingerprint_t;
+	struct ssl_ja3_info *ja3_info;
+};
 
 
-static int ja3_md5sum(const char *str, int len, char *buf, int size)
+int ja3_md5sum(const char *str, int len, char *buf, int size)
 {
     int n;
     int ret = 0;
@@ -603,7 +602,7 @@ static int ssl_generate_ja3_fingerprint(const unsigned char *data, int len, char
 
 static void free_ja3_fingerprint_label(int thread_seq, void *value)
 {
-	ssl_fingerprint_t *fingerprint_info=(ssl_fingerprint_t *)value;
+	struct ssl_fingerprint *fingerprint_info=(struct ssl_fingerprint *)value;
 	if(value!=NULL)
 	{
         if (fingerprint_info->ja3_info != NULL)
@@ -617,14 +616,6 @@ static void free_ja3_fingerprint_label(int thread_seq, void *value)
             dictator_free(thread_seq, fingerprint_info->ja3_info);
             fingerprint_info->ja3_info = NULL;
         }
-        
-        if (fingerprint_info->ja3s_info != NULL)
-        {
-            dictator_free(thread_seq, (void *)fingerprint_info->ja3s_info->fp);
-            fingerprint_info->ja3s_info->fp = NULL;
-            dictator_free(thread_seq, fingerprint_info->ja3s_info);
-            fingerprint_info->ja3s_info = NULL;
-        }
 
         dictator_free(thread_seq, value);
 		value=NULL;
@@ -633,18 +624,18 @@ static void free_ja3_fingerprint_label(int thread_seq, void *value)
 	return ;
 }
 
-struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq)
+struct ssl_ja3_info *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq)
 {
 	int ret=0;
 	char ja3_fp[8192]={0};
 	char sni_buff[1024]={0};
-    _ssl_ja3_info_t *ja3_info = NULL;
+ 	struct ssl_ja3_info *ja3_info = NULL;
 	
-	ssl_fingerprint_t *fingerprint_info=(ssl_fingerprint_t *)project_req_get_struct(stream, g_ssl_ja3_fingerprint_label_id);
+	struct ssl_fingerprint *fingerprint_info=(struct ssl_fingerprint *)project_req_get_struct(stream, g_ssl_ja3_fingerprint_label_id);
     if (fingerprint_info == NULL)
     {
-        fingerprint_info = (ssl_fingerprint_t *)dictator_malloc(thread_seq, sizeof(ssl_fingerprint_t));
-        memset(fingerprint_info, 0, sizeof(ssl_fingerprint_t));
+        fingerprint_info = (struct ssl_fingerprint *)dictator_malloc(thread_seq, sizeof(struct ssl_fingerprint));
+        memset(fingerprint_info, 0, sizeof(struct ssl_fingerprint));
 		project_req_add_struct(stream, g_ssl_ja3_fingerprint_label_id, (void *)fingerprint_info);
     }
 	else if(fingerprint_info->ja3_info!=NULL)
@@ -655,7 +646,7 @@ struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsig
 	ret=ssl_generate_ja3_fingerprint(payload, payload_len, ja3_fp, sizeof(ja3_fp), sni_buff, sizeof(sni_buff));
 	if(ret==1)
 	{
-		fingerprint_info->ja3_info=(struct _ssl_ja3_info_t *)dictator_malloc(thread_seq, sizeof(struct _ssl_ja3_info_t));
+		fingerprint_info->ja3_info=(struct ssl_ja3_info *)dictator_malloc(thread_seq, sizeof(struct ssl_ja3_info));
         ja3_info = fingerprint_info->ja3_info;
 
 		if(strlen(sni_buff)>0 && strlen(sni_buff)<sizeof(sni_buff))
@@ -688,122 +679,6 @@ struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsig
 
 	return NULL;
 }
-
-static int ssl_generate_ja3s_fingerprint(const unsigned char *data, int len, char *ja3_fp, int ja3_fp_len)
-{
-    BSB bsb;
-    BSB_INIT(bsb, data, len);
-
-    if (BSB_REMAINING(bsb) <= 9)
-    {
-        return 0;
-    }
-
-    BSB_IMPORT_skip(bsb, 5); // Message Header
-    BSB_IMPORT_skip(bsb, 4); // Handshake Type + message len
-    uint16_t ver = 0;
-    BSB_IMPORT_u16(bsb, ver);
-    BSB_IMPORT_skip(bsb, 32);     // Random
-
-    if(BSB_IS_ERROR(bsb))
-        return 0;
-
-    /* Parse sessionid, only for SSLv3 - TLSv1.2 */
-    if (ver >= 0x0300 && ver <= 0x0303) {
-        int skiplen = 0;
-        BSB_IMPORT_u08(bsb, skiplen);   // Session Id Length
-        BSB_IMPORT_skip(bsb, skiplen);  // Session Id
-    }
-
-    uint16_t cipher = 0;
-    BSB_IMPORT_u16(bsb, cipher);
-    BSB_IMPORT_skip(bsb, 1);
-
-
-    BSB ja3bsb;
-    char eja3[10000];
-    BSB eja3bsb;
-
-    BSB_INIT(ja3bsb, ja3_fp, ja3_fp_len);
-    BSB_INIT(eja3bsb, eja3, sizeof(eja3));
-
-    if (BSB_REMAINING(bsb) > 2) {
-        int etotlen = 0;
-        BSB_IMPORT_u16(bsb, etotlen);  // Extensions Length
-
-        etotlen = MIN(etotlen, BSB_REMAINING(bsb));
-
-        BSB ebsb;
-        BSB_INIT(ebsb, BSB_WORK_PTR(bsb), etotlen);
-
-        while (BSB_REMAINING(ebsb) > 0) {
-            int etype = 0, elen = 0;
-
-            BSB_IMPORT_u16 (ebsb, etype);
-            BSB_IMPORT_u16 (ebsb, elen);
-
-            BSB_EXPORT_sprintf(eja3bsb, "%d-", etype);
-
-            if (elen > BSB_REMAINING(ebsb))
-                break;
-
-            // if (etype == 0x2b && elen == 2) { // etype 0x2b is supported version
-            //     uint16_t supported_version = 0;
-            //     BSB_IMPORT_u16(ebsb, supported_version);
-            // }
-
-            BSB_IMPORT_skip (ebsb, elen);
-        }
-        BSB_EXPORT_rewind(eja3bsb, 1); // Remove last -
-    }
-
-    BSB_EXPORT_sprintf(ja3bsb, "%d,%d,%.*s", ver, cipher, (int)BSB_LENGTH(eja3bsb), eja3);
-
-    return 1;
-}
-
-struct _ssl_ja3s_info_t *ssl_get_ja3s_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq)
-{
-	int ret=0;
-	char ja3s_fp[8192]={0};
-    _ssl_ja3s_info_t *ja3s_info = NULL;
-	
-	ssl_fingerprint_t *fingerprint_info=(ssl_fingerprint_t *)project_req_get_struct(stream, g_ssl_ja3_fingerprint_label_id);
-    if (fingerprint_info == NULL)
-    {
-        fingerprint_info = (ssl_fingerprint_t *)dictator_malloc(thread_seq, sizeof(ssl_fingerprint_t));
-        memset(fingerprint_info, 0, sizeof(ssl_fingerprint_t));
-		project_req_add_struct(stream, g_ssl_ja3_fingerprint_label_id, (void *)fingerprint_info);
-    }
-	else if(fingerprint_info->ja3s_info!=NULL)
-	{
-		return fingerprint_info->ja3s_info;
-	}
-
-	ret=ssl_generate_ja3s_fingerprint(payload, payload_len, ja3s_fp, sizeof(ja3s_fp));
-	if(ret==1)
-	{
-		fingerprint_info->ja3s_info=(struct _ssl_ja3s_info_t *)dictator_malloc(thread_seq, sizeof(struct _ssl_ja3s_info_t));
-        ja3s_info = fingerprint_info->ja3s_info;
-
-		if(strlen(ja3s_fp)>0)
-		{
-			ja3s_info->fp=(char *)dictator_malloc(thread_seq, MD5_DIGEST_LENGTH*2+1);
-			ja3s_info->fp_len=ja3_md5sum(ja3s_fp, strlen(ja3s_fp), ja3s_info->fp, MD5_DIGEST_LENGTH*2+1);
-			ja3s_info->fp[ja3s_info->fp_len]='\0';
-		}
-		else
-		{
-			ja3s_info->fp=NULL;
-			ja3s_info->fp_len=0;
-		}
-
-		return ja3s_info;
-	}
-
-	return NULL;
-}
-
 
 int ssl_ja3_init(void)
 {

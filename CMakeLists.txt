@@ -40,6 +40,7 @@ if (CMAKE_CXX_CPPCHECK)
             "--suppress=unmatchedSuppression"
             "--suppress=unreadVariable"
 	    "--suppress=unreachableCode"
+	    "--suppress=constParameter"
     )
   message("cppcheck start...")
 else()
@@ -87,7 +88,7 @@ SET(CPACK_RPM_LIBRARIES_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_SOURCE_DIR}/cmake/p
 install(TARGETS ssl LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name} COMPONENT LIBRARIES)
 install(FILES bin/${lib_name}.inf DESTINATION ${CMAKE_INSTALL_PREFIX}/plug/protocol/${lib_name} COMPONENT PROFILE)
 install(FILES bin/${lib_name}/${lib_name}.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/conf/${lib_name}/ COMPONENT PROFILE)
-install(FILES src/${lib_name}.h DESTINATION /opt/MESA/include/MESA COMPONENT HEADER)
+install(FILES include/${lib_name}.h DESTINATION /opt/MESA/include/MESA COMPONENT HEADER)
 
 file(GLOB DEMO
     "test/src/*.c"

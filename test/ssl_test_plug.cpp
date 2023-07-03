@@ -27,14 +27,14 @@ extern "C" int commit_test_result_json(cJSON *node, const char *name);
 
 static int g_result_count = 1;
 
-static char *ssl_test_assemble_san(st_cert_t *cert)
+static char *ssl_test_assemble_san(struct ssl_certificate *certificate)
 {
 	char *san_buf=NULL;
 	int total_buflen = 0;
-	for (int i = 0; i < cert->SSLSubAltName->count; i++)
+	for (int i = 0; i < certificate->subject_alter.num; i++)
 	{
-		int tmp_buflen = strlen(cert->SSLSubAltName->san_array[i].san);
-		char *tmp_buf = (char *)realloc(san_buf, total_buflen+tmp_buflen+1);
+		int tmp_buflen=strlen(certificate->subject_alter.name[i]);
+		char *tmp_buf=(char *)realloc(san_buf, total_buflen+tmp_buflen+1);
 		if(tmp_buf==NULL)
 		{
 			free(san_buf);
@@ -44,7 +44,7 @@ static char *ssl_test_assemble_san(st_cert_t *cert)
 		
 		san_buf=tmp_buf;
 		san_buf[total_buflen + tmp_buflen] = ';';
-		memcpy(san_buf+total_buflen, cert->SSLSubAltName->san_array[i].san, tmp_buflen);
+		memcpy(san_buf+total_buflen, certificate->subject_alter.name[i], tmp_buflen);
 		total_buflen+=tmp_buflen+1;
 	}
 
@@ -60,10 +60,9 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
     assert(NULL != session_info || pme != NULL);
 
     cJSON *ctx = (cJSON *)*pme;
-	st_cert_t *cert=NULL;
-    ssl_stream *a_ssl = (ssl_stream *)(session_info->app_info);
-    _ssl_ja3_info_t *ja3_info = NULL;
-    _ssl_ja3s_info_t *ja3s_info = NULL;
+
+    struct ssl_stream *a_ssl = (struct ssl_stream *)(session_info->app_info);
+    struct ssl_ja3_info *ja3_info = NULL;
     
     if (session_info->session_state & SESSION_STATE_PENDING)
     {
@@ -78,28 +77,28 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
     switch (session_info->prot_flag)
     {
         case SSL_CLIENT_HELLO:
-	        if (a_ssl== NULL || a_ssl->stClientHello==NULL)
+	        if (a_ssl== NULL || a_ssl->chello==NULL)
 	        {
 	        	break;
 	        }
 
-		if (strlen((char *)(a_ssl->stClientHello->server_name)) > 0)
+		if (strlen((char *)(a_ssl->chello->server_name)) > 0)
 		{
-			cJSON_AddStringToObject(ctx, (const char *)"ssl_sni", (const char *)(a_ssl->stClientHello->server_name));
+			cJSON_AddStringToObject(ctx, (const char *)"ssl_sni", (const char *)(a_ssl->chello->server_name));
 		}
-		if (a_ssl->stClientHello->encrypt_chello != NULL)
+		if (a_ssl->chello->encrypt_chello != NULL)
 		{
 			cJSON_AddStringToObject(ctx, (const char *)"ssl_ech", "1");
 		}
 
-		if (a_ssl->stClientHello->encrypted_server_name.esni != NULL)
+		if (a_ssl->chello->esni.is_esni==1)
 		{
 			cJSON_AddStringToObject(ctx, (const char *)"ssl_sni", "ESNI");
 		}
 
-		if (ssl_get_version_name(a_ssl->stClientHello->client_ver))
+		if (ssl_get_version_name(a_ssl->chello->version) != NULL)
 		{
-			cJSON_AddStringToObject(ctx, "ssl_client_version", ssl_get_version_name(a_ssl->stClientHello->client_ver));
+			cJSON_AddStringToObject(ctx, "ssl_client_version", ssl_get_version_name(a_ssl->chello->version));
 		}
 
 		ja3_info = ssl_get_ja3_fingerprint(a_tcp, (unsigned char *)a_tcp->ptcpdetail->pdata, (unsigned int)a_tcp->ptcpdetail->datalen, a_tcp->threadnum);
@@ -110,129 +109,122 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 
 	    break;
 	case SSL_SERVER_HELLO:
-		ja3s_info = ssl_get_ja3s_fingerprint(a_tcp, (unsigned char *)a_tcp->ptcpdetail->pdata, (unsigned int)a_tcp->ptcpdetail->datalen, a_tcp->threadnum);
-		if (ja3s_info != NULL && ja3s_info->fp != NULL && ja3s_info->fp_len > 0)
+		if (a_ssl->shello->ja3s.fingerprint_md5 != NULL && a_ssl->shello->ja3s.fingerprint_md5_len > 0)
 		{
-			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", ja3s_info->fp);
+			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", a_ssl->shello->ja3s.fingerprint_md5);
 		}
 		break;
 	case SSL_CERTIFICATE_DETAIL:
-			if (a_ssl==NULL || a_ssl->stSSLCert==NULL || a_tcp->curdir==DIR_C2S)
+			if (a_ssl==NULL || a_ssl->certificate==NULL || a_tcp->curdir==DIR_C2S)
 			{
 				break;
 			}
 
-			cert = a_ssl->stSSLCert;
-			if (cert->cert_type != CERT_TYPE_INDIVIDUAL)
+			if (a_ssl->certificate->cert_type != CERT_TYPE_INDIVIDUAL)
 			{
 				break;
 			}
 
-			if (strlen(cert->SSLVersion) > 0)
+			if(a_ssl->certificate->version.len > 0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_version", cert->SSLVersion);
+				cJSON_AddStringToObject(ctx, "ssl_cert_version", (const char*)a_ssl->certificate->version.value);
 			}
 	
-			if(strlen(cert->SSLIssuer)>0)
+			if(strlen(a_ssl->certificate->issuer.rdn_sequence_list)>0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_Issuer", cert->SSLIssuer);
+				cJSON_AddStringToObject(ctx, "ssl_cert_Issuer", a_ssl->certificate->issuer.rdn_sequence_list);
 				
-				if (cert->SSLIssuerCN != NULL && strlen(cert->SSLIssuerCN) > 0)
+				if(strlen(a_ssl->certificate->issuer.common) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerCN", cert->SSLIssuerCN);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerCN", a_ssl->certificate->issuer.common);
 				}
 			
-				if (cert->SSLIssuerO != NULL && strlen(cert->SSLIssuerO) > 0)
+				if(strlen(a_ssl->certificate->issuer.organization) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerO", cert->SSLIssuerO);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerO", a_ssl->certificate->issuer.organization);
 				}
 
-				if (cert->SSLIssuerC != NULL && strlen(cert->SSLIssuerC) > 0)
+				if(strlen(a_ssl->certificate->issuer.country) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerC", cert->SSLIssuerC);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerC", a_ssl->certificate->issuer.country);
 				}
 			
-				if (cert->SSLIssuerP != NULL && strlen(cert->SSLIssuerP) > 0)
+				if(strlen(a_ssl->certificate->issuer.state_or_Province) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerP", cert->SSLIssuerP);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerP", a_ssl->certificate->issuer.state_or_Province);
 				}
 			
-				if (cert->SSLIssuerL != NULL && strlen(cert->SSLIssuerL) > 0)
+				if(strlen(a_ssl->certificate->issuer.locality) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerL", cert->SSLIssuerL);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerL", a_ssl->certificate->issuer.locality);
 				}
 			
-				if (cert->SSLIssuerS != NULL && strlen(cert->SSLIssuerS) > 0)
+				if(strlen(a_ssl->certificate->issuer.street_address) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerS", cert->SSLIssuerS);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerS", a_ssl->certificate->issuer.street_address);
 				}
 			
-				if (cert->SSLIssuerU != NULL && strlen(cert->SSLIssuerU) > 0)
+				if(strlen(a_ssl->certificate->issuer.organizational_unit) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerU", cert->SSLIssuerU);
+					cJSON_AddStringToObject(ctx, "ssl_cert_IssuerU", a_ssl->certificate->issuer.organizational_unit);
 				}
 			}
 			
-			if(strlen(cert->SSLSub)>0)
+			if(strlen(a_ssl->certificate->subject.rdn_sequence_list)>0)
 			{						
-				cJSON_AddStringToObject(ctx, "ssl_cert_Sub", cert->SSLSub);
+				cJSON_AddStringToObject(ctx, "ssl_cert_Sub", a_ssl->certificate->subject.rdn_sequence_list);
 				
-				if (cert->SSLSubCN != NULL && strlen(cert->SSLSubCN) > 0)
+				if(strlen(a_ssl->certificate->subject.common) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubCN", cert->SSLSubCN);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubCN", a_ssl->certificate->subject.common);
 				}
 				
-				if (cert->SSLSubO != NULL && strlen(cert->SSLSubO) > 0)
+				if(strlen(a_ssl->certificate->subject.organization) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubO", cert->SSLSubO);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubO", a_ssl->certificate->subject.organization);
 				}
 				
-				if (cert->SSLSubC != NULL && strlen(cert->SSLSubC) > 0)
+				if(strlen(a_ssl->certificate->subject.country) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubC", cert->SSLSubC);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubC", a_ssl->certificate->subject.country);
 				}
 				
-				if (cert->SSLSubP != NULL && strlen(cert->SSLSubP) > 0)
+				if(strlen(a_ssl->certificate->subject.state_or_Province) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubP", cert->SSLSubP);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubP", a_ssl->certificate->subject.state_or_Province);
 				}
 				
-				if (cert->SSLSubL != NULL && strlen(cert->SSLSubL) > 0)
+				if(strlen(a_ssl->certificate->subject.locality) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubL", cert->SSLSubL);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubL", a_ssl->certificate->subject.locality);
 				}
 				
-				if (cert->SSLSubS != NULL && strlen(cert->SSLSubS) > 0)
+				if(strlen(a_ssl->certificate->subject.street_address) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubS", cert->SSLSubS);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubS", a_ssl->certificate->subject.street_address);
 				}
 				
-				if (cert->SSLSubU != NULL && strlen(cert->SSLSubU) > 0)
+				if(strlen(a_ssl->certificate->subject.organizational_unit) > 0)
 				{
-					cJSON_AddStringToObject(ctx, "ssl_cert_SubU", cert->SSLSubU);
+					cJSON_AddStringToObject(ctx, "ssl_cert_SubU", a_ssl->certificate->subject.organizational_unit);
 				}
 			}
 			
-			if (cert->SSLSubCN!=NULL)
+			if(a_ssl->certificate->subject_alter.name != NULL && a_ssl->certificate->subject_alter.num>0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_SubCN", cert->SSLSubCN);
-			}
-			
-			if (cert->SSLSubAltName != NULL && cert->SSLSubAltName->count > 0)
-			{
-					char *san_buf = ssl_test_assemble_san(cert);
+					char *san_buf = ssl_test_assemble_san(a_ssl->certificate);
 					cJSON_AddStringToObject(ctx, "ssl_cert_SubAltName", san_buf);
 					free(san_buf);
 					san_buf=NULL;
 			}
 
-			if(cert->SSLSerialNumLen>0)
+			if(a_ssl->certificate->serial.len>0)
 			{
-				char *serialBuf=(char *)calloc(1, cert->SSLSerialNumLen*2+1+2);
+				char *serialBuf=(char *)calloc(1, a_ssl->certificate->serial.len*2+1+2);
 				int offset=snprintf(serialBuf, 3, "0x");
-				for(int i=0; i<cert->SSLSerialNumLen; i++)
+				for(int i=0; i<a_ssl->certificate->serial.len; i++)
 				{
-					offset+=snprintf(serialBuf+offset, cert->SSLSerialNumLen*2+1+2-offset, "%02hhx", (unsigned char )(cert->SSLSerialNum[i]));
+					offset+=snprintf(serialBuf+offset, a_ssl->certificate->serial.len*2+1+2-offset, "%02hhx", (unsigned char )(a_ssl->certificate->serial.value[i]));
 				}
 				
 				cJSON_AddStringToObject(ctx, "ssl_cert_SerialNum", serialBuf);
@@ -240,46 +232,44 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 				serialBuf=NULL;
 			}
 
-			if(strlen(cert->SSLAgID)>0)
+			if(a_ssl->certificate->signature_algorithm.len>0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_AgID", cert->SSLAgID);
+				cJSON_AddStringToObject(ctx, "ssl_cert_AgID", (const char*)a_ssl->certificate->signature_algorithm.value);
 			}
 
-			if(strlen(cert->SSLFPAg)>0)
+			if(strlen(a_ssl->certificate->validity.before)>0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_FPAg", cert->SSLFPAg);
+				cJSON_AddStringToObject(ctx, "ssl_cert_From", a_ssl->certificate->validity.before);
 			}
 
-			if(strlen(cert->SSLFrom)>0)
+			if(strlen(a_ssl->certificate->validity.after)>0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_From", cert->SSLFrom);
+				cJSON_AddStringToObject(ctx, "ssl_cert_To", a_ssl->certificate->validity.after);
 			}
 
-			if(strlen(cert->SSLTo)>0)
+			if(a_ssl->certificate->algorithm_identifier.len>0)
 			{
-				cJSON_AddStringToObject(ctx, "ssl_cert_To", cert->SSLTo);
+				cJSON_AddStringToObject(ctx, "ssl_cert_SSLFPAg", (const char*)a_ssl->certificate->algorithm_identifier.value);
 			}
-            break;
-        default:
-            break;
-    }
+			break;
+		default:
+			break;
+	}
 
-    if(session_info->session_state&SESSION_STATE_CLOSE)
-    {
-            if(ctx)
-            {
-                char result_name[16]="";
-                sprintf(result_name,"SSL_RESULT_%d", g_result_count);
-                commit_test_result_json(ctx, result_name);
-                g_result_count+=1;
-            }
-            *pme = NULL;
-            return PROT_STATE_DROPME;
+	if(session_info->session_state&SESSION_STATE_CLOSE)
+	{
+		if(ctx)
+		{
+			char result_name[16]="";
+			sprintf(result_name,"SSL_RESULT_%d", g_result_count);
+			commit_test_result_json(ctx, result_name);
+			g_result_count+=1;
+		}
+		*pme = NULL;
+		return PROT_STATE_DROPME;
+	}
 
-    }
-
-    return PROT_STATE_GIVEME;
-
+	return PROT_STATE_GIVEME;
 }
 
 extern "C" int SSL_TEST_PLUG_INIT()
