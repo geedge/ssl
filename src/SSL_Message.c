@@ -307,19 +307,24 @@ int ssl_parse_encrypt_server_name(struct ssl_client_hello *chello, struct ssl_l2
 	return 1;
 }
 
-UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *payload, int payload_len)
+int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *payload, int payload_len)
 {
 	int offset=0,one_ltv=0;
 	chello->total_len=BtoL3BytesNum((const char *)(payload+1));
-	if(chello->total_len<0 || (chello->total_len+CLIENT_HELLO_HDRLEN > payload_len) || (chello->total_len-(int)sizeof(chello->version)<0)) /*CLIENT_HELLO_HDRLEN: 4 means client_type+len*/
+	if(chello->total_len<0) /*CLIENT_HELLO_HDRLEN: 4 means client_type+len*/
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
+	}
+
+	if((chello->total_len+CLIENT_HELLO_HDRLEN > payload_len) || (chello->total_len-(int)sizeof(chello->version)<0))
+	{
+		return SSL_FLASE;
 	}
 
 	chello->version=ssl_get_hello_version((unsigned char *)payload, payload_len);
 	if(chello->version==0)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 
 	offset+=(CLIENT_HELLO_HDRLEN+sizeof(chello->version));
@@ -330,7 +335,7 @@ UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *pay
 	
 	if(payload_len-offset-SSL_RANDOM_SIZE<=0)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	
 	chello->random.bytes.len=SSL_RANDOM_SIZE;
@@ -341,7 +346,7 @@ UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *pay
 	one_ltv=ssl_parse_lv1(&(chello->session), payload+offset, payload_len-offset);
 	if(one_ltv==-1)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	offset+=one_ltv;
 	
@@ -349,7 +354,7 @@ UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *pay
 	one_ltv=ssl_parse_lv2(&chello->ciphersuites, payload+offset, payload_len-offset);
 	if(one_ltv==-1)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	offset+=one_ltv;
 
@@ -357,7 +362,7 @@ UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *pay
 	one_ltv=ssl_parse_lv1(&(chello->compress_method), payload+offset, payload_len-offset);
 	if(one_ltv==-1)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	offset+=one_ltv;
 
@@ -370,7 +375,7 @@ UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *pay
 		one_ltv=ssl_parse_ltv2(&(chello->extensions.extension[i]), payload+offset, payload_len-offset);
 		if(one_ltv==-1)
 		{
-			return SSL_RETURN_DROPME;
+			return SSL_FLASE;
 		}
 		offset+=one_ltv;
 		chello->extensions.num++;
@@ -397,10 +402,10 @@ UCHAR ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *pay
 		}
 	}
 
-	return SSL_RETURN_NORM;
+	return SSL_TRUE;
 }
 
-UCHAR ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *payload, int payload_len)
+int ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *payload, int payload_len)
 {
 	int offset=0,one_ltv=0;
 	int ja3s_string_offset=0;
@@ -408,13 +413,13 @@ UCHAR ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *pay
 	shello->total_len = BtoL3BytesNum((const char *)(payload+1));
 	if(shello->total_len<0 || (shello->total_len+SERVER_HELLO_HDRLEN > payload_len-offset))
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 
 	shello->version=ssl_get_hello_version((unsigned char *)payload, payload_len-offset);
 	if(shello->version==0)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	
 	ja3s_string_offset+=snprintf(ja3s_string+ja3s_string_offset, sizeof(ja3s_string)-ja3s_string_offset, "%u,", shello->version);
@@ -427,7 +432,7 @@ UCHAR ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *pay
 	
 	if(payload_len-offset-SSL_RANDOM_SIZE<=0)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	
 	shello->random.bytes.len=SSL_RANDOM_SIZE;
@@ -438,7 +443,7 @@ UCHAR ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *pay
 	one_ltv=ssl_parse_lv1(&(shello->session), payload+offset, payload_len-offset);
 	if(one_ltv==-1)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	offset+=one_ltv;
 	
@@ -464,7 +469,7 @@ UCHAR ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *pay
 		one_ltv=ssl_parse_ltv2(&(shello->extensions.extension[i]), payload+offset, payload_len-offset);
 		if(one_ltv==-1)
 		{
-			return SSL_RETURN_DROPME;
+			return SSL_FLASE;
 		}
 		offset+=one_ltv;
 		shello->extensions.num++;
@@ -475,30 +480,30 @@ UCHAR ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *pay
 	ja3s_string_offset--;
 	if(ja3s_string_offset==0)
 	{
-		return SSL_RETURN_DROPME;		
+		return SSL_FLASE;		
 	}
 
 	ja3s_string[ja3s_string_offset]='\0';
 	shello->ja3s.fingerprint_md5_len=ja3_md5sum(ja3s_string, ja3s_string_offset, shello->ja3s.fingerprint_md5, sizeof(shello->ja3s.fingerprint_md5));
 	shello->ja3s.fingerprint_md5[shello->ja3s.fingerprint_md5_len]='\0';
 	
-	return 1;
+	return SSL_TRUE;
 }
 
-UCHAR ssl_parse_new_session_ticket(struct ssl_new_session_ticket *new_session_ticket, char *payload, int payload_len)
+int ssl_parse_new_session_ticket(struct ssl_new_session_ticket *new_session_ticket, char *payload, int payload_len)
 {
 	int offset=0;
 	new_session_ticket->total_len=BtoL3BytesNum((const char *)(payload+1));
 	if(new_session_ticket->total_len<0)
 	{
-		return SSL_RETURN_DROPME;
+		return SSL_FLASE;
 	}
 	
 	/*4 means _type+len*/
 	if(new_session_ticket->total_len+SESSION_TICKET_HDRLEN > payload_len-offset)
 	{
 		/**packet trunked**/
-		return SSL_RETURN_NORM;
+		return SSL_FLASE;
 	}
 	offset+=SESSION_TICKET_HDRLEN;
 	new_session_ticket->lift_time=BtoL4BytesNum((const char *)(payload+offset));
@@ -507,7 +512,7 @@ UCHAR ssl_parse_new_session_ticket(struct ssl_new_session_ticket *new_session_ti
 	
 	new_session_ticket->ticket=(unsigned char *)(payload+offset);
 
-	return SSL_RETURN_NORM;
+	return SSL_TRUE;
 }
 
 int ssl_parse_certificate_detail(const struct streaminfo *a_tcp, struct ssl_runtime_context *ssl_context, char *payload, int payload_len, int thread_seq, const void *a_packet)
@@ -648,9 +653,9 @@ int ssl_parse_handshake(const struct streaminfo *a_tcp, struct ssl_runtime_conte
 			struct ssl_certificate certificate={0};
 			ssl_context->stream.certificate=&certificate;
 			state=ssl_parse_certificate(a_tcp, ssl_context, payload+offset, payload_len-offset, thread_seq, a_packet);
-			if(state==SSL_FLASE)
+			if(state!=SSL_TRUE)
 			{
-				return SSL_FLASE;
+				return state;
 			}
 			offset+=(certificate.total_len+CERTIFICATE_HDRLEN);
 			ssl_context->stream.certificate=NULL;
@@ -666,9 +671,9 @@ int ssl_parse_handshake(const struct streaminfo *a_tcp, struct ssl_runtime_conte
 			struct ssl_client_hello chello={0};
 			ssl_context->stream.chello=&chello;
 			state=ssl_parse_client_hello(&chello, (unsigned char *)(payload+offset), payload_len-offset);
-			if(state==SSL_FLASE)
+			if(state!=SSL_TRUE)
 			{
-				return SSL_FLASE;
+				return state;
 			}
 
 			ssl_call_plugins(a_tcp, ssl_context, (char *)(payload+offset), chello.total_len+CLIENT_HELLO_HDRLEN, SSL_CLIENT_HELLO_MASK, thread_seq, a_packet);
@@ -686,9 +691,9 @@ int ssl_parse_handshake(const struct streaminfo *a_tcp, struct ssl_runtime_conte
 			struct ssl_server_hello shello={0};
 			ssl_context->stream.shello=&shello;
 			state=ssl_parse_server_hello(&shello, (unsigned char *)(payload+offset), payload_len-offset);
-			if(state==SSL_FLASE)
+			if(state!=SSL_TRUE)
 			{
-				return SSL_FLASE;
+				return state;
 			}
 			
 			ssl_call_plugins(a_tcp, ssl_context, (char *)(payload+offset), shello.total_len+SERVER_HELLO_HDRLEN, SSL_SERVER_HELLO_MASK, thread_seq, a_packet);
@@ -704,9 +709,9 @@ int ssl_parse_handshake(const struct streaminfo *a_tcp, struct ssl_runtime_conte
 			struct ssl_new_session_ticket new_session_ticket={0};
 			ssl_context->stream.new_session_ticket=&new_session_ticket;
 			state=ssl_parse_new_session_ticket(&new_session_ticket, (payload+offset), (payload_len-offset));
-			if(state==SSL_FLASE)
+			if(state!=SSL_TRUE)
 			{
-				return SSL_FLASE;
+				return state;
 			}
 
 			ssl_call_plugins(a_tcp, ssl_context, (char *)(payload+offset), new_session_ticket.total_len+SESSION_TICKET_HDRLEN, SSL_NEW_SESSION_TICKET_MASK, thread_seq, a_packet);

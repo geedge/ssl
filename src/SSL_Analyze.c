@@ -161,10 +161,6 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 			ssl_context=(struct ssl_runtime_context *)(*pme);
 		case OP_STATE_DATA:
 			return_val=ssl_parse_stream(a_tcp, ssl_context ,thread_seq, a_packet);
-			if(SSL_FLASE==return_val || ssl_context->business.return_value&PROT_STATE_DROPME)
-			{
-				state=APP_STATE_DROPME;
-			}
 			break;
 		case OP_STATE_CLOSE:
 			if(ssl_context->version!=UNKNOWN_VERSION)
@@ -173,10 +169,16 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 			}
 
 			ssl_context->over_flag=SSL_TRUE;
+			return_val=ssl_parse_stream(a_tcp, ssl_context ,thread_seq, a_packet);
 			ssl_call_plugins(a_tcp, ssl_context, NULL, 0, SSL_INTEREST_KEY_MASK, thread_seq, a_packet);		
 			break;
 		default:
 			break;
+	}
+
+	if(SSL_FLASE==return_val || ssl_context->business.return_value&PROT_STATE_DROPME)
+	{
+		state=APP_STATE_DROPME;
 	}
 
 	if(ssl_context->business.return_value&PROT_STATE_DROPPKT)
@@ -188,6 +190,10 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 	{
 		ssl_release_context(ssl_context, thread_seq);
 		*pme=NULL;
+	}
+	else
+	{
+		ssl_context->business.return_value=0;
 	}
 	
 	return state;
