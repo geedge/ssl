@@ -51,6 +51,7 @@ struct ssl_runtime_para
 	char stat_appname[16];
 	int proto_tag_id ;
 	int max_cache_len;
+	int parse_certificate_detail;
 };
 
 struct ssl_business_info

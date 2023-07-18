@@ -140,7 +140,7 @@ int ssl_trunk_cache(struct ssl_runtime_context *ssl_context, char *payload, int 
 
 	ssl_context->record.cache_len=0;
 	int length=MIN(payload_len, g_ssl_runtime_para.max_cache_len);
-	memcpy(ssl_context->record.cache_buff+ssl_context->record.cache_len, payload, length);
+	memmove(ssl_context->record.cache_buff+ssl_context->record.cache_len, payload, length);
 	ssl_context->record.cache_len+=length;
 
 	return 0;
@@ -517,7 +517,7 @@ int ssl_parse_new_session_ticket(struct ssl_new_session_ticket *new_session_tick
 
 int ssl_parse_certificate_detail(const struct streaminfo *a_tcp, struct ssl_runtime_context *ssl_context, char *payload, int payload_len, int thread_seq, const void *a_packet)
 {
-	if(!(g_ssl_runtime_para.ssl_interested_region_flag&SSL_CERTIFICATE_DETAIL))
+	if(!(g_ssl_runtime_para.ssl_interested_region_flag&SSL_CERTIFICATE_DETAIL) || g_ssl_runtime_para.parse_certificate_detail==0)
 	{
 		ssl_context->stream.certificate=NULL;
 		return SSL_TRUE;
