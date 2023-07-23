@@ -366,42 +366,44 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	}
 	offset+=one_ltv;
 
-	/*get extension*/
-	chello->extensions.len=(unsigned short)BtoL2BytesNum((const char *)(payload+offset));
-	offset+=sizeof(chello->extensions.len);
-
-	for(int i=0; payload_len-offset >= 4 && i < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
+	if(offset < payload_len)
 	{
-		one_ltv=ssl_parse_ltv2(&(chello->extensions.extension[i]), payload+offset, payload_len-offset);
-		if(one_ltv==-1)
-		{
-			return SSL_FLASE;
-		}
-		offset+=one_ltv;
-		chello->extensions.num++;
+		/*get extension*/
+		chello->extensions.len=(unsigned short)BtoL2BytesNum((const char *)(payload+offset));
+		offset+=sizeof(chello->extensions.len);
 
-		switch(chello->extensions.extension[i].type)
+		for(int i=0; payload_len-offset >= 4 && i < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
 		{
-			case	SERVER_NAME_EXT_TYPE:
-				ssl_parse_server_name(chello, &(chello->extensions.extension[i]));
-				break;
-			case	SESSION_TICKET_EXT_TYPE:
-				chello->session_ticket=&(chello->extensions.extension[i]);
-				break;
-			case	ENCRPTED_SERVER_NAME_EXT_TYPE:
-				ssl_parse_encrypt_server_name(chello, &(chello->extensions.extension[i]));
-				break;
-			case	ENCRPTED_CLIENT_HELLO_EXT_TYPE:
-				chello->encrypt_chello=&(chello->extensions.extension[i]);
-				break;
-			case	ALPN_EXT_TYPE:
-				chello->alpn=&(chello->extensions.extension[i]);
-				break;
-			default:
-				break;
+			one_ltv=ssl_parse_ltv2(&(chello->extensions.extension[i]), payload+offset, payload_len-offset);
+			if(one_ltv==-1)
+			{
+				return SSL_FLASE;
+			}
+			offset+=one_ltv;
+			chello->extensions.num++;
+
+			switch(chello->extensions.extension[i].type)
+			{
+				case	SERVER_NAME_EXT_TYPE:
+					ssl_parse_server_name(chello, &(chello->extensions.extension[i]));
+					break;
+				case	SESSION_TICKET_EXT_TYPE:
+					chello->session_ticket=&(chello->extensions.extension[i]);
+					break;
+				case	ENCRPTED_SERVER_NAME_EXT_TYPE:
+					ssl_parse_encrypt_server_name(chello, &(chello->extensions.extension[i]));
+					break;
+				case	ENCRPTED_CLIENT_HELLO_EXT_TYPE:
+					chello->encrypt_chello=&(chello->extensions.extension[i]);
+					break;
+				case	ALPN_EXT_TYPE:
+					chello->alpn=&(chello->extensions.extension[i]);
+					break;
+				default:
+					break;
+			}
 		}
 	}
-
 	return SSL_TRUE;
 }
 
@@ -459,22 +461,25 @@ int ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *paylo
 	shello->compress_method.value=payload+offset;
 	offset+=1;
 
-	/*get extension*/
-	shello->extensions.len=(unsigned short)BtoL2BytesNum((const char *)(payload+offset));
-	offset+=sizeof(shello->extensions.len);
-
-	// shello->total_len not contains handshake header
-	for(int i=0; (shello->total_len-offset+SERVER_HELLO_HDRLEN) >=4 && i < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
+	if(offset < payload_len)
 	{
-		one_ltv=ssl_parse_ltv2(&(shello->extensions.extension[i]), payload+offset, payload_len-offset);
-		if(one_ltv==-1)
-		{
-			return SSL_FLASE;
-		}
-		offset+=one_ltv;
-		shello->extensions.num++;
+		/*get extension*/
+		shello->extensions.len=(unsigned short)BtoL2BytesNum((const char *)(payload+offset));
+		offset+=sizeof(shello->extensions.len);
 
-		ja3s_string_offset+=snprintf(ja3s_string+ja3s_string_offset, sizeof(ja3s_string)-ja3s_string_offset, "%u-", shello->extensions.extension[i].type);
+		// shello->total_len not contains handshake header
+		for(int i=0; (shello->total_len-offset+SERVER_HELLO_HDRLEN) >=4 && i < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
+		{
+			one_ltv=ssl_parse_ltv2(&(shello->extensions.extension[i]), payload+offset, payload_len-offset);
+			if(one_ltv==-1)
+			{
+				return SSL_FLASE;
+			}
+			offset+=one_ltv;
+			shello->extensions.num++;
+
+			ja3s_string_offset+=snprintf(ja3s_string+ja3s_string_offset, sizeof(ja3s_string)-ja3s_string_offset, "%u-", shello->extensions.extension[i].type);
+		}
 	}
 
 	ja3s_string_offset--;
