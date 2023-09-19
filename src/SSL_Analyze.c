@@ -168,15 +168,13 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 				ssl_add_proto_tag( a_tcp, "SSL", strlen("SSL"));
 			}
 
-			ssl_context->over_flag=SSL_TRUE;
-			return_val=ssl_parse_stream(a_tcp, ssl_context ,thread_seq, a_packet);
-			ssl_call_plugins(a_tcp, ssl_context, NULL, 0, SSL_INTEREST_KEY_MASK, thread_seq, a_packet);		
+			return_val=ssl_parse_stream(a_tcp, ssl_context ,thread_seq, a_packet);	
 			break;
 		default:
 			break;
 	}
 
-	if(SSL_FLASE==return_val || ssl_context->business.return_value&PROT_STATE_DROPME)
+	if(SSL_FLASE==return_val)
 	{
 		state=APP_STATE_DROPME;
 	}
@@ -188,6 +186,12 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 
 	if(state&APP_STATE_DROPME || a_tcp->opstate==OP_STATE_CLOSE)
 	{
+		if(ssl_context->is_call_business==1)
+		{
+			ssl_context->over_flag=1;
+			ssl_call_plugins(a_tcp, ssl_context, NULL, 0, SSL_INTEREST_KEY_MASK, thread_seq, a_packet);
+		}
+		
 		ssl_release_context(ssl_context, thread_seq);
 		*pme=NULL;
 	}

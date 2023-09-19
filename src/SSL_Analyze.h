@@ -68,12 +68,13 @@ struct ssl_record_trunk
 
 struct ssl_runtime_context
 {
-	unsigned char 				link_state;
-	unsigned char 				over_flag;
-	unsigned char 				is_ssl_stream;	
-	unsigned short 				version; //SSL versions, definition like TLSV1_2_VERSION in ssl.h
-
+	unsigned char link_state;
+	unsigned char over_flag;
+	unsigned char is_ssl_stream;
 	unsigned char first_pkt_flag;
+	unsigned char is_call_business;
+	unsigned char padding;
+	unsigned short version; //SSL versions, definition like TLSV1_2_VERSION in ssl.h
 	struct ssl_stream stream;
 	struct ssl_record_trunk record;
 	struct ssl_business_info business;

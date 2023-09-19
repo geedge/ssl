@@ -280,6 +280,7 @@ void ssl_call_plugins(const struct streaminfo *a_tcp, struct ssl_runtime_context
 			session_info.buf=buff;
 			session_info.buflen=buff_len;
 			ssl_context->business.return_value=PROT_PROCESS(&session_info, &(ssl_context->business.param), thread_seq, (struct streaminfo *)a_tcp, a_packet);
+			ssl_context->is_call_business=1;
 		}
 	}
 }
