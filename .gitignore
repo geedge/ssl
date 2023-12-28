@@ -1,4 +1,4 @@
 .vscode/
-build/
+build*/
 cmake-build-*/
 ssl.si4project/

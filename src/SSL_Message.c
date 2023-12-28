@@ -372,37 +372,39 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 		chello->extensions.len=(unsigned short)BtoL2BytesNum((const char *)(payload+offset));
 		offset+=sizeof(chello->extensions.len);
 
-		for(int i=0; payload_len-offset >= 4 && i < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
+		int ex_offset=0;
+		for(int i=0; payload_len-offset >= 4 && ex_offset < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
 		{
-			one_ltv=ssl_parse_ltv2(&(chello->extensions.extension[i]), payload+offset, payload_len-offset);
+			one_ltv=ssl_parse_ltv2(&(chello->extensions.extension[ex_offset]), payload+offset, payload_len-offset);
 			if(one_ltv==-1)
 			{
 				return SSL_FLASE;
 			}
 			offset+=one_ltv;
-			chello->extensions.num++;
 
-			switch(chello->extensions.extension[i].type)
+			switch(chello->extensions.extension[ex_offset].type)
 			{
 				case	SERVER_NAME_EXT_TYPE:
-					ssl_parse_server_name(chello, &(chello->extensions.extension[i]));
+					ssl_parse_server_name(chello, &(chello->extensions.extension[ex_offset++]));
 					break;
 				case	SESSION_TICKET_EXT_TYPE:
-					chello->session_ticket=&(chello->extensions.extension[i]);
+					chello->session_ticket=&(chello->extensions.extension[ex_offset++]);
 					break;
 				case	ENCRPTED_SERVER_NAME_EXT_TYPE:
-					ssl_parse_encrypt_server_name(chello, &(chello->extensions.extension[i]));
+					ssl_parse_encrypt_server_name(chello, &(chello->extensions.extension[ex_offset++]));
 					break;
 				case	ENCRPTED_CLIENT_HELLO_EXT_TYPE:
-					chello->encrypt_chello=&(chello->extensions.extension[i]);
+					chello->encrypt_chello=&(chello->extensions.extension[ex_offset++]);
 					break;
 				case	ALPN_EXT_TYPE:
-					chello->alpn=&(chello->extensions.extension[i]);
+					chello->alpn=&(chello->extensions.extension[ex_offset++]);
 					break;
 				default:
 					break;
 			}
 		}
+
+		chello->extensions.num=ex_offset;
 	}
 	return SSL_TRUE;
 }
