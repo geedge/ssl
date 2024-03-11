@@ -3,6 +3,7 @@
 #include <MESA/stream.h>
 
 #include "ssl.h"
+#include "SSL_Message.h"
 
 #if(__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__ >= 410)
 #define atomic_inc(x) __sync_add_and_fetch((x),1)
@@ -62,6 +63,8 @@ struct ssl_business_info
 
 struct ssl_record_trunk
 {
+	unsigned char is_offset_header;
+	struct ssl_record_header header;
 	int cache_len;
 	char* cache_buff;
 };

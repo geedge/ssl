@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.0)
 
 project(${lib_name}_test)
 
@@ -44,3 +44,4 @@ add_test(NAME RUN_BUG_TEST COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/p
 add_test(NAME RUN_MULTIPLE_HANDSHAKE_TEST COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/pcap/multiple_handshake/ssl_multiple_handshake_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/multiple_handshake/ -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})
 add_test(NAME RUN_CLOSE_CONTAINS_PAYLOAD_TEST COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/pcap/close_contains_payload/ssl_close_contains_payload_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/close_contains_payload/ -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})
 add_test(NAME RUN_EXTENSION_EXCEED_16 COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/pcap/extensions_exceed_16/extensions_exceed_16_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/extensions_exceed_16/ -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})
+add_test(NAME RUN_CLIENT_HELLO_FRAGMENT COMMAND proto_test_main ${CMAKE_CURRENT_SOURCE_DIR}/pcap/client_hello_fragment/ssl_client_hello_fragment_result.json -f "find ${CMAKE_CURRENT_SOURCE_DIR}/pcap/client_hello_fragment/ -name *.pcap|sort -V" WORKING_DIRECTORY ${PROTO_TEST_RUN_DIR})

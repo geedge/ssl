@@ -62,7 +62,6 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
     cJSON *ctx = (cJSON *)*pme;
 
     struct ssl_stream *a_ssl = (struct ssl_stream *)(session_info->app_info);
-    struct ssl_ja3_info *ja3_info = NULL;
     
     if (session_info->session_state & SESSION_STATE_PENDING)
     {
@@ -101,12 +100,10 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 			cJSON_AddStringToObject(ctx, "ssl_client_version", ssl_get_version_name(a_ssl->chello->version));
 		}
 
-		ja3_info = ssl_get_ja3_fingerprint(a_tcp, (unsigned char *)a_tcp->ptcpdetail->pdata, (unsigned int)a_tcp->ptcpdetail->datalen, a_tcp->threadnum);
-		if (ja3_info != NULL && ja3_info->fp != NULL && ja3_info->fp_len > 0)
+		if(strlen(a_ssl->chello->ja3.md5) >0)
 		{
-			cJSON_AddStringToObject(ctx, "ssl_ja3_hash", ja3_info->fp);
+			cJSON_AddStringToObject(ctx, "ssl_ja3_hash", a_ssl->chello->ja3.md5);
 		}
-
 	    break;
 	case SSL_SERVER_HELLO:
 		if (a_ssl->shello->ja3s.fingerprint_md5 != NULL && a_ssl->shello->ja3s.fingerprint_md5_len > 0)

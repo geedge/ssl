@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.0)
 
 set(lib_name ssl)
 
@@ -39,8 +39,10 @@ if (CMAKE_CXX_CPPCHECK)
             "--suppress=uselessAssignmentPtrArg"
             "--suppress=unmatchedSuppression"
             "--suppress=unreadVariable"
-	    "--suppress=unreachableCode"
-	    "--suppress=constParameter"
+            "--suppress=unreachableCode"
+            "--suppress=constParameter"
+            "--suppress=variableScope"
+            "--suppress=*:${PROJECT_SOURCE_DIR}/src/utstring.h"
     )
   message("cppcheck start...")
 else()

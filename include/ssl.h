@@ -82,6 +82,13 @@ struct ssl_extenstions
 	struct ssl_l2tv extension[MAX_EXTENSION_NUM];
 };
 
+#define MAX_JA_MD5_STR_LEN		128
+struct ssl_ja_fingerprint
+{
+	int md5_len;
+	char md5[MAX_JA_MD5_STR_LEN];
+};
+
 #define	MAX_SERVER_NAME_LEN	512
 struct ssl_client_hello
 {
@@ -97,6 +104,7 @@ struct ssl_client_hello
 	struct ssl_extenstions extensions;
 	struct ssl_encrypt_server_name esni;
 	char server_name[MAX_SERVER_NAME_LEN];
+	struct ssl_ja_fingerprint ja3;
 };
 
 #define MAX_JA3S_FINGERPRINT_LEN		128
