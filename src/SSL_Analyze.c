@@ -216,7 +216,6 @@ extern "C" int SSL_INIT(void)
 	MESA_load_profile_int_def(filename, "SSL", "MAX_CACHE_LEN", &g_ssl_runtime_para.max_cache_len, 10240);
 	MESA_load_profile_int_def(filename, "SSL", "PARSE_CERTIFICATE_DETAIL", &g_ssl_runtime_para.parse_certificate_detail, 1);
 
-	ssl_ja3_init();
 	g_ssl_runtime_para.proto_tag_id=project_producer_register("MESA_PROTO", "struct", ssl_proto_tag_free);
 
 	return 0;

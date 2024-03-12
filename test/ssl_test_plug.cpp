@@ -106,9 +106,9 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 		}
 	    break;
 	case SSL_SERVER_HELLO:
-		if (a_ssl->shello->ja3s.fingerprint_md5 != NULL && a_ssl->shello->ja3s.fingerprint_md5_len > 0)
+		if (a_ssl->shello->ja3s.md5 != NULL && a_ssl->shello->ja3s.md5_len > 0)
 		{
-			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", a_ssl->shello->ja3s.fingerprint_md5);
+			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", a_ssl->shello->ja3s.md5);
 		}
 		break;
 	case SSL_CERTIFICATE_DETAIL:

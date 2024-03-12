@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <openssl/md5.h>
 
 #include "utstring.h"
 
@@ -36,7 +37,6 @@
 #define CERTIFICATE_HDRLEN		7
 #define SSL_CERTIFICATE_HDRLEN  3
 
-extern int ja3_md5sum(const char *str, int len, char *buf, int size);
 extern struct ssl_serial_string g_astCipherSuit;
 
 const struct ssl_serial_string g_astCompression[] =
@@ -55,6 +55,25 @@ const struct ssl_value2string ssl_version_list[] =
     { SSLV2_VERSION, 		"SSL2.0" },
     { UNKNOWN_VERSION, 		NULL }
 };
+
+int ja3_md5sum(const char *str, int len, char *buf, int size)
+{
+    int n;
+    int ret = 0;
+    MD5_CTX ctx;
+    unsigned char tmp[MD5_DIGEST_LENGTH];
+
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, str, len);
+    MD5_Final(tmp, &ctx);
+
+    for (n = 0; n < MD5_DIGEST_LENGTH; n++)
+    {
+        ret += snprintf(buf + ret, size - ret, "%.2x", tmp[n]);
+    }
+
+    return ret;
+}
 
 // https://tools.ietf.org/html/draft-davidben-tls-grease-00
 static int ssl_is_grease_value(unsigned short val)
@@ -604,8 +623,8 @@ int ssl_parse_server_hello(struct ssl_server_hello *shello, unsigned char *paylo
 	}
 
 	ja3s_string[ja3s_string_offset]='\0';
-	shello->ja3s.fingerprint_md5_len=ja3_md5sum(ja3s_string, ja3s_string_offset, shello->ja3s.fingerprint_md5, sizeof(shello->ja3s.fingerprint_md5));
-	shello->ja3s.fingerprint_md5[shello->ja3s.fingerprint_md5_len]='\0';
+	shello->ja3s.md5_len=ja3_md5sum(ja3s_string, ja3s_string_offset, shello->ja3s.md5, sizeof(shello->ja3s.md5));
+	shello->ja3s.md5[shello->ja3s.md5_len]='\0';
 	
 	return SSL_TRUE;
 }

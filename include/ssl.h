@@ -107,19 +107,13 @@ struct ssl_client_hello
 	struct ssl_ja_fingerprint ja3;
 };
 
-#define MAX_JA3S_FINGERPRINT_LEN		128
-struct ssl_ja3s_info
-{
-	int fingerprint_md5_len;
-	char fingerprint_md5[MAX_JA3S_FINGERPRINT_LEN];
-};
 struct ssl_server_hello
 {
 	int total_len;	//3 
 	unsigned short version;
 	unsigned short extension_len;
 	unsigned short extension_num;
-	struct ssl_ja3s_info ja3s;
+	struct ssl_ja_fingerprint ja3s;
 	struct ssl_random random;
 	struct ssl_l1v session;
 	struct ssl_l2v ciphersuites;
@@ -240,13 +234,3 @@ const char* ssl_get_suite_name(unsigned char* suite_value, unsigned short suite_
 int ssl_get_alpn_list(struct ssl_l2tv *extension_alpn, struct ssl_alpn_list* alpn_list, int alpn_size);
 int ssl_read_specific_cert(const char* conj_cert_buf, uint32_t conj_buflen, uint8_t cert_type, char** cert, uint32_t* cert_len);
 int ssl_read_all_cert(const char* conj_cert_buf, uint32_t conj_buflen, struct ssl_certificate_chain* cert_unit, uint32_t unit_size);
-
-struct ssl_ja3_info
-{
-	int sni_len;
-	int fp_len;
-	char *sni;
-	char *fp;
-};
-
-struct ssl_ja3_info *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq);
