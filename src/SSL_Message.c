@@ -157,6 +157,11 @@ void ssl_trunk_free(struct ssl_runtime_context *ssl_context, int thread_seq)
 
 int ssl_trunk_cache(struct ssl_runtime_context *ssl_context, char *payload, int payload_len, int thread_seq)
 {
+	if(payload==NULL || payload_len<=0)
+	{
+		return 0;
+	}
+	
 	if(ssl_context->record.cache_buff==NULL)
 	{
 		ssl_context->record.cache_buff=(char *)dictator_malloc(thread_seq, g_ssl_runtime_para.max_cache_len);
@@ -334,20 +339,10 @@ int ssl_parse_encrypt_server_name(struct ssl_client_hello *chello, struct ssl_l2
 int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *payload, int payload_len)
 {
 	int offset=0,one_ltv=0;
-	unsigned int ec_point_format=0;
-
-	UT_string *ja3_string,*cipher_suite_string,*ec_string,*ex_string;
-	utstring_new(ja3_string);
-	utstring_new(cipher_suite_string);
-	utstring_printf(cipher_suite_string, ",");
-	utstring_new(ec_string);
-	utstring_printf(ec_string, ",");
-	utstring_new(ex_string);
-	utstring_printf(ex_string, ",");
-
 	chello->total_len=BtoL3BytesNum((const char *)(payload+1));
 	if(chello->total_len<0) /*CLIENT_HELLO_HDRLEN: 4 means client_type+len*/
 	{
+
 		return SSL_FLASE;
 	}
 
@@ -361,8 +356,6 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	{
 		return SSL_FLASE;
 	}
-
-	utstring_printf(ja3_string, "%u", chello->version);
 	offset+=(CLIENT_HELLO_HDRLEN+sizeof(chello->version));
 
 	/*get client hello random*/
@@ -393,18 +386,6 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 		return SSL_FLASE;
 	}
 
-	if(chello->ciphersuites.len>0)
-	{
-		for(unsigned short i=0; i<chello->ciphersuites.len; i+=2)
-		{
-			unsigned short cipher_suite=BtoL2BytesNum((const char *)(chello->ciphersuites.value+i));
-			if(ssl_is_grease_value(cipher_suite)==0)
-			{
-				utstring_printf(cipher_suite_string, "%u-", cipher_suite);
-			}
-		}
-	}
-
 	offset+=one_ltv;
 
 	/*get client hello compress*/
@@ -415,6 +396,13 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	}
 	offset+=one_ltv;
 
+
+	UT_string *ex_string;
+	utstring_new(ex_string);
+	utstring_printf(ex_string, ",");
+
+	struct ssl_l2tv *ec=NULL;
+	struct ssl_l2tv *ec_point_format=NULL;
 	if(offset < payload_len)
 	{
 		/*get extension*/
@@ -427,6 +415,7 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 			one_ltv=ssl_parse_ltv2(&(chello->extensions.extension[ex_offset]), payload+offset, payload_len-offset);
 			if(one_ltv==-1)
 			{
+				utstring_free(ex_string);
 				return SSL_FLASE;
 			}
 
@@ -455,42 +444,10 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 					chello->alpn=&(chello->extensions.extension[ex_offset++]);
 					break;
 				case	EC_POINT_FORMATS_EXT_TYPE:
-					// parse ec point formats
-					{
-						char length=BtoL1BytesNum((const char*)(chello->extensions.extension[ex_offset].value));
-						switch(length)
-						{
-							case	1:
-								ec_point_format=BtoL1BytesNum((const char*)(chello->extensions.extension[ex_offset].value+1));
-								break;
-							case	2:
-								ec_point_format=BtoL2BytesNum((const char*)(chello->extensions.extension[ex_offset].value+1));
-								break;
-							case	3:
-								ec_point_format=BtoL3BytesNum((const char*)(chello->extensions.extension[ex_offset].value+1));
-								break;
-							case	4:
-								ec_point_format=BtoL4BytesNum((const char*)(chello->extensions.extension[ex_offset].value+1));
-								break;
-							default:
-								ec_point_format=0;
-								break;
-						}
-					}
+					ec_point_format=&(chello->extensions.extension[ex_offset++]);
 					break;
 				case	SUPPORTED_GROUPS_EXT_TYPE:
-					// parse supported groups
-					{
-						unsigned short length=BtoL2BytesNum((const char*)(chello->extensions.extension[ex_offset].value));
-						for(unsigned short j=0; j<length; j+=2)
-						{
-							unsigned short group=BtoL2BytesNum((const char*)(chello->extensions.extension[ex_offset].value+j+2));
-							if(ssl_is_grease_value(group)==0)
-							{
-								utstring_printf(ec_string, "%u-", group);
-							}
-						}
-					}
+					ec=&(chello->extensions.extension[ex_offset++]);
 					break;
 				default:
 					break;
@@ -499,11 +456,59 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 
 		chello->extensions.num=ex_offset;
 	}
+	
+	UT_string *ja3_string;
+	utstring_new(ja3_string);
+	utstring_printf(ja3_string, "%u", chello->version);
+
+	UT_string *cipher_suite_string;
+	utstring_new(cipher_suite_string);
+	utstring_printf(cipher_suite_string, ",");
+	if(chello->ciphersuites.len>0)
+	{
+		for(unsigned short i=0; i<chello->ciphersuites.len; i+=2)
+		{
+			unsigned short cipher_suite=BtoL2BytesNum((const char *)(chello->ciphersuites.value+i));
+			if(ssl_is_grease_value(cipher_suite)==0)
+			{
+				utstring_printf(cipher_suite_string, "%u-", cipher_suite);
+			}
+		}
+	}
 
 	utstring_bincpy(ja3_string, utstring_body(cipher_suite_string), (utstring_len(cipher_suite_string)==1 ? utstring_len(cipher_suite_string) : utstring_len(cipher_suite_string)-1));
+
 	utstring_bincpy(ja3_string, utstring_body(ex_string), (utstring_len(ex_string)==1 ? utstring_len(ex_string) : utstring_len(ex_string)-1));
+	
+	UT_string *ec_string;
+	utstring_new(ec_string);
+	utstring_printf(ec_string, ",");
+	if(ec!=NULL)
+	{
+		unsigned short length=BtoL2BytesNum((const char*)(ec->value));
+		for(unsigned short j=0; j<length; j+=2)
+		{
+			unsigned short group=BtoL2BytesNum((const char*)(ec->value+j+2));
+			if(ssl_is_grease_value(group)==0)
+			{
+				utstring_printf(ec_string, "%u-", group);
+			}
+		}
+	}
 	utstring_bincpy(ja3_string, utstring_body(ec_string), (utstring_len(ec_string)==1 ? utstring_len(ec_string) : utstring_len(ec_string)-1));
-	utstring_printf(ja3_string, ",%u", ec_point_format);
+
+	UT_string *ec_point_format_string;
+	utstring_new(ec_point_format_string);
+	utstring_printf(ec_point_format_string, ",");
+	if(ec_point_format!=NULL)
+	{
+		char length=BtoL1BytesNum((const char*)(ec_point_format->value));
+		for(char j=0; j<length; j++)
+		{
+			utstring_printf(ec_point_format_string, "%u-", ec_point_format->value[j+1]);
+		}
+	}
+	utstring_bincpy(ja3_string, utstring_body(ec_point_format_string), (utstring_len(ec_point_format_string)==1 ? utstring_len(ec_point_format_string) : utstring_len(ec_point_format_string)-1));
 
 	chello->ja3.md5_len=ja3_md5sum(utstring_body(ja3_string), utstring_len(ja3_string), chello->ja3.md5, sizeof(chello->ja3.md5));
 	chello->ja3.md5[chello->ja3.md5_len]='\0';
@@ -512,6 +517,7 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	utstring_free(cipher_suite_string);
 	utstring_free(ec_string);
 	utstring_free(ex_string);
+	utstring_free(ec_point_format_string);
 
 	return SSL_TRUE;
 }
@@ -1095,6 +1101,7 @@ int ssl_parse_stream(const struct streaminfo *a_tcp, struct ssl_runtime_context 
 	/**validaty check**/
 	if(NULL==payload || payload_len<SSL_HEADER_LEN)
 	{
+		ssl_trunk_cache(ssl_context, payload, payload_len, thread_seq);
 		return SSL_TRUE;
 	}
 
