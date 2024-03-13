@@ -161,8 +161,6 @@ release_build_release_for_centos7:
     BUILD_TYPE: RelWithDebInfo
     PACKAGE: 1
     UPLOAD_RPM: 1
-    UPLOAD_SYMBOL_FILES: 1
-    SYMBOL_TARGET: ssl
     PULP3_REPO_NAME: protocol-stable-x86_64.el7
     PULP3_DIST_NAME: protocol-stable-x86_64.el7
   extends: .build_by_travis_for_centos7
@@ -252,8 +250,6 @@ release_build_release_for_centos8:
     BUILD_TYPE: RelWithDebInfo
     PACKAGE: 1
     UPLOAD_RPM: 1
-    UPLOAD_SYMBOL_FILES: 1
-    SYMBOL_TARGET: ssl
     PULP3_REPO_NAME: protocol-stable-x86_64.el8
     PULP3_DIST_NAME: protocol-stable-x86_64.el8
   extends: .build_by_travis_for_centos8
