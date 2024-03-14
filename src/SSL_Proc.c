@@ -383,7 +383,7 @@ UCHAR ssl_doWithCertificateDetail(ssl_stream **a_ssl_stream, struct streaminfo *
 	return return_val;
 }
 
-UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
+UCHAR ssl_doWithClientHello(st_ext_t exts[], int exts_num, ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet)
 {
 	UCHAR return_val = SSL_RETURN_NORM;	
@@ -391,15 +391,15 @@ UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 
 	/*parse extionsion server_name*/
 	int i=0;
-	for(i=0; i<(*a_ssl_stream)->stClientHello->ext_num; i++)
+	for(i=0; i<exts_num; i++)
 	{
-		if((*a_ssl_stream)->stClientHello->exts[i].type == SERVER_NAME_EXT_TYPE)
+		if(exts[i].type == SERVER_NAME_EXT_TYPE)
 		{
 			st_client_server_name_t* pstClientServerName = (st_client_server_name_t*)dictator_malloc(thread_seq,sizeof(st_client_server_name_t));
 			unsigned char* cur_data = NULL;			
 			unsigned char servernamelen = 0;
-			pstClientServerName->server_name_list_len =  (*a_ssl_stream)->stClientHello->exts[i].len;
-			cur_data =  (*a_ssl_stream)->stClientHello->exts[i].data;
+			pstClientServerName->server_name_list_len =  exts[i].len;
+			cur_data =  exts[i].data;
 			
 			pstClientServerName->server_name_list_len -= sizeof(pstClientServerName->server_name_list_len);
 			cur_data += sizeof(pstClientServerName->server_name_list_len);
@@ -436,16 +436,16 @@ UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 				dictator_free(thread_seq,pstClientServerName);
 			//}                        
 		}
-		else if((*a_ssl_stream)->stClientHello->exts[i].type == SESSION_TICKET_EXT_TYPE)
+		else if(exts[i].type == SESSION_TICKET_EXT_TYPE)
 		{
-			(*a_ssl_stream)->stClientHello->session_ticket.ticketlen = (*a_ssl_stream)->stClientHello->exts[i].len;
-			(*a_ssl_stream)->stClientHello->session_ticket.ticket =  (*a_ssl_stream)->stClientHello->exts[i].data;
+			(*a_ssl_stream)->stClientHello->session_ticket.ticketlen = exts[i].len;
+			(*a_ssl_stream)->stClientHello->session_ticket.ticket =  exts[i].data;
 			//printf("====session ticket:%d\n", (*a_ssl_stream)->stClientHello->session_ticket.ticketlen);
 		}
-		else if((*a_ssl_stream)->stClientHello->exts[i].type == ENCRPTED_SERVER_NAME_EXT_TYPE)
+		else if(exts[i].type == ENCRPTED_SERVER_NAME_EXT_TYPE)
 		{			
-			char* cur_data = (char*)(*a_ssl_stream)->stClientHello->exts[i].data;	
-			int   iUnAnaHelloLen = (*a_ssl_stream)->stClientHello->exts[i].len;
+			char* cur_data = (char*)exts[i].data;	
+			int   iUnAnaHelloLen = exts[i].len;
 			if(iUnAnaHelloLen>SUITE_VALUELEN)
 			{
 				(*a_ssl_stream)->stClientHello->encrypted_server_name.suite_value = (unsigned char *)dictator_malloc(thread_seq,SUITE_VALUELEN);
@@ -479,12 +479,13 @@ UCHAR ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 				iUnAnaHelloLen -= (ESNILEN_LEN+(*a_ssl_stream)->stClientHello->encrypted_server_name.esni_len);
 			}
 		}		
-		else if((*a_ssl_stream)->stClientHello->exts[i].type == ENCRPTED_CLIENT_HELLO_EXT_TYPE)
+		else if(exts[i].type == ENCRPTED_CLIENT_HELLO_EXT_TYPE)
 		{
-			(*a_ssl_stream)->stClientHello->encrypt_chello = &(*a_ssl_stream)->stClientHello->exts[i];
+			(*a_ssl_stream)->stClientHello->encrypt_chello = &exts[i];
 		}
 	}	
-	
+	(*a_ssl_stream)->stClientHello->ext_num = MIN(exts_num, MAX_EXTENSION_NUM);	
+	memcpy((*a_ssl_stream)->stClientHello->exts, exts, sizeof(st_ext_t)*(*a_ssl_stream)->stClientHello->ext_num);
 	return_val = ssl_callPlugins(a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
     (*a_ssl_stream)->output_region_mask = SSL_INTEREST_KEY_MASK;
 	return return_val;

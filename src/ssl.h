@@ -99,7 +99,7 @@ typedef struct _st_esni_t
 }st_esni_t;
 
 //#############################################client hello
-#define MAX_EXTENSION_NUM					64
+#define MAX_EXTENSION_NUM					16
 #define MAX_EXT_DATA_LEN					256
 #define SERVER_NAME_EXT_TYPE				0x0000
 #define SERVER_NAME_HOST_TYPE 				0x0000

@@ -290,45 +290,39 @@ UCHAR ssl_analyseHandShake(char *pcSslData, int iAllMsgLen, int iSslUnAnalyseLen
 			}
 
 			/*get extension*/
+			st_ext_t exts_on_stack[64];
+			memset(&exts_on_stack, 0, sizeof(exts_on_stack));
 			a_ssl_stream->stClientHello->extlen = (unsigned short)BtoL2BytesNum(pcCurSslData);
 			pcCurSslData += sizeof(a_ssl_stream->stClientHello->extlen);
 
 			int i = 0;
-			for (i = 0; iUnAnaHelloLen >= 4 && i < MAX_EXTENSION_NUM; i++) // min len of ext is 4 byte
+			for (i = 0; iUnAnaHelloLen >= 4 && i < 64; i++) // min len of ext is 4 byte
 			{
 
-				a_ssl_stream->stClientHello->exts[i].type = (unsigned short)BtoL2BytesNum(pcCurSslData);
-				pcCurSslData += sizeof(a_ssl_stream->stClientHello->exts[i].type);
-				iUnAnaHelloLen -= sizeof(a_ssl_stream->stClientHello->exts[i].type);
+				exts_on_stack[i].type = (unsigned short)BtoL2BytesNum(pcCurSslData);
+				pcCurSslData += sizeof(exts_on_stack[i].type);
+				iUnAnaHelloLen -= sizeof(exts_on_stack[i].type);
 				if (iUnAnaHelloLen < 0)
 				{
 					return SSL_RETURN_DROPME;
 				}
 
-				a_ssl_stream->stClientHello->exts[i].len = (unsigned short)BtoL2BytesNum(pcCurSslData);
-				pcCurSslData += sizeof(a_ssl_stream->stClientHello->exts[i].len);
-				iUnAnaHelloLen -= sizeof(a_ssl_stream->stClientHello->exts[i].len);
-				if (iUnAnaHelloLen < 0 || a_ssl_stream->stClientHello->exts[i].len > iUnAnaHelloLen)
+				exts_on_stack[i].len = (unsigned short)BtoL2BytesNum(pcCurSslData);
+				pcCurSslData += sizeof(exts_on_stack[i].len);
+				iUnAnaHelloLen -= sizeof(exts_on_stack[i].len);
+				if (iUnAnaHelloLen < 0 || exts_on_stack[i].len > iUnAnaHelloLen)
 				{
 					return SSL_RETURN_DROPME;
 				}
-				a_ssl_stream->stClientHello->exts[i].data = (unsigned char *)dictator_malloc(thread_seq, a_ssl_stream->stClientHello->exts[i].len);
-				memcpy(a_ssl_stream->stClientHello->exts[i].data, pcCurSslData, a_ssl_stream->stClientHello->exts[i].len); // get ext data
-				pcCurSslData += a_ssl_stream->stClientHello->exts[i].len;
-				iUnAnaHelloLen -= a_ssl_stream->stClientHello->exts[i].len;
+				exts_on_stack[i].data=(unsigned char *)pcCurSslData;
+
+
+				pcCurSslData += exts_on_stack[i].len;
+				iUnAnaHelloLen -= exts_on_stack[i].len;
 			}
-			a_ssl_stream->stClientHello->ext_num = i;
+			int ext_on_stack_num = i;
 			// printf("ext_num: %d\n", a_ssl_stream->stClientHello->ext_num);
-			return_val = ssl_doWithClientHello(&a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
-			// 20141121
-			for (int j = 0; j < a_ssl_stream->stClientHello->ext_num; j++)
-			{
-				if (a_ssl_stream->stClientHello->exts[j].data != NULL)
-				{
-					dictator_free(thread_seq, a_ssl_stream->stClientHello->exts[j].data);
-					a_ssl_stream->stClientHello->exts[j].data = NULL;
-				}
-			}
+			return_val = ssl_doWithClientHello(exts_on_stack, ext_on_stack_num, &a_ssl_stream, a_tcp, region_flag, thread_seq, a_packet);
 			a_ssl_stream->stClientHello->ext_num = 0;
 			a_ssl_stream->stClientHello->session_ticket.ticket = NULL;
 			if (a_ssl_stream->stClientHello->session.session_value != NULL)

@@ -35,7 +35,7 @@ UCHAR 			ssl_doWithCertificateDetail(ssl_stream **a_ssl_stream, struct streaminf
 						unsigned long long region_flag, int thread_seq, void *a_packet);
 UCHAR 			ssl_doWithServerName(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet);
-UCHAR 			ssl_doWithClientHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
+UCHAR 			ssl_doWithClientHello(st_ext_t exts[], int ext_num, ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet);
 UCHAR 			ssl_doWithServerHello(ssl_stream **a_ssl_stream, struct streaminfo *a_tcp,
 						unsigned long long region_flag, int thread_seq, void *a_packet);
