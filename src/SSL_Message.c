@@ -483,7 +483,7 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	UT_string *cipher_suite_string;
 	utstring_new(cipher_suite_string);
 	utstring_printf(cipher_suite_string, ",");
-	if(chello->ciphersuites.len>0)
+	if(chello->ciphersuites.len>0 && chello->ciphersuites.value!=NULL)
 	{
 		for(unsigned short i=0; i<chello->ciphersuites.len; i+=2)
 		{
@@ -502,10 +502,10 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	UT_string *ec_string;
 	utstring_new(ec_string);
 	utstring_printf(ec_string, ",");
-	if(ec!=NULL)
+	if(ec!=NULL && ec->value!=NULL && ec->len>0)
 	{
 		unsigned short length=BtoL2BytesNum((const char*)(ec->value));
-		for(unsigned short j=0; j<length; j+=2)
+		for(unsigned short j=0; (j<length) && (length < ec->len); j+=2)
 		{
 			unsigned short group=BtoL2BytesNum((const char*)(ec->value+j+2));
 			if(ssl_is_grease_value(group)==0)
@@ -519,10 +519,10 @@ int ssl_parse_client_hello(struct ssl_client_hello *chello, unsigned char *paylo
 	UT_string *ec_point_format_string;
 	utstring_new(ec_point_format_string);
 	utstring_printf(ec_point_format_string, ",");
-	if(ec_point_format!=NULL)
+	if(ec_point_format!=NULL && ec_point_format->value!=NULL && ec_point_format->len>0)
 	{
 		char length=BtoL1BytesNum((const char*)(ec_point_format->value));
-		for(char j=0; j<length; j++)
+		for(char j=0; j<length && (length < ec_point_format->len); j++)
 		{
 			utstring_printf(ec_point_format_string, "%u-", ec_point_format->value[j+1]);
 		}
