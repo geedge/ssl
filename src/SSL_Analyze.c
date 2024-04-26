@@ -17,6 +17,7 @@
 #include <MESA/MESA_prof_load.h>
 #include "SSL_Proc.h"
 
+#include <assert.h>
 
 #define GIT_VERSION_CATTER(v) __attribute__((__used__)) const char * GIT_VERSION_##v = NULL
 #define GIT_VERSION_EXPEND(v) GIT_VERSION_CATTER(v)
@@ -203,6 +204,44 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 	return state;
 }
 
+extern "C" char SSL_DETAIN_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_seq, const void *a_packet)
+{
+	if(g_ssl_runtime_para.detain_frag_chello_enable==0)return APP_STATE_DROPME;
+
+	if(a_tcp->ptcpdetail->serverpktnum <= MAX_DETAIN_FRAG_CHELLO_NUM)
+	{
+		struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx);
+		if(pkts && pkts->finish==1)
+		{
+			struct detain_pkt *p=NULL;
+			for(unsigned int i = 0; i < pkts->p_sz; i++)
+			{
+				p=pkts->p[i];
+   		        if (p)MESA_detain_pkt_forward_based_on_stream(a_tcp, p);
+				pkts->p[i]=NULL;
+			}
+			pkts->p_sz=0;
+        }
+		return APP_STATE_GIVEME;
+	}
+	return APP_STATE_DROPME;
+}
+
+static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int bridge_id, void *data)
+{
+    struct frag_chello *pkts = (struct frag_chello *)data;
+	struct detain_pkt *p=NULL;
+    if (pkts)
+    {
+		for(unsigned int i = 0; i < pkts->p_sz; i++)
+		{
+            if (p)MESA_detain_pkt_free(p);
+		}
+        free(pkts);
+    }
+    return;
+}
+
 extern "C" int SSL_INIT(void)
 {
 	memset(&g_ssl_runtime_para, 0, sizeof(struct ssl_runtime_para));
@@ -215,8 +254,16 @@ extern "C" int SSL_INIT(void)
 	const char *filename="./conf/ssl/ssl_main.conf";
 	MESA_load_profile_int_def(filename, "SSL", "MAX_CACHE_LEN", &g_ssl_runtime_para.max_cache_len, 10240);
 	MESA_load_profile_int_def(filename, "SSL", "PARSE_CERTIFICATE_DETAIL", &g_ssl_runtime_para.parse_certificate_detail, 1);
+	MESA_load_profile_uint_def(filename, "SSL", "DETAIN_FRAG_CHELLO_ENABLE", &g_ssl_runtime_para.detain_frag_chello_enable, 0);
 
 	g_ssl_runtime_para.proto_tag_id=project_producer_register("MESA_PROTO", "struct", ssl_proto_tag_free);
+
+	if(g_ssl_runtime_para.detain_frag_chello_enable>0)
+	{
+		g_ssl_runtime_para.frag_chello_exdata_idx=stream_bridge_build(SSL_FRAG_CHELLO_BRIDEGE_NAME, "w");
+		assert(g_ssl_runtime_para.frag_chello_exdata_idx >= 0);
+		stream_bridge_register_data_free_cb(g_ssl_runtime_para.frag_chello_exdata_idx, ssl_retain_packet_bridge_free);
+	}
 
 	return 0;
 }

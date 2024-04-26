@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stream_inc/stream_base.h>
+#include <stream_inc/stream_rawpkt.h>
 #include <string.h>
 #include <stdlib.h>
 #include <openssl/md5.h>
@@ -10,6 +12,7 @@
 #include "SSL_Message.h"
 #include "SSL_Proc.h"
 #include "SSL_Certificate.h"
+
 
 
 #define SUITE_VALUELEN					2
@@ -983,6 +986,35 @@ int ssl_parse_version(const struct streaminfo *a_tcp, struct ssl_runtime_context
 	return SSL_TRUE;
 }
 
+static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
+{
+	if(g_ssl_runtime_para.detain_frag_chello_enable == 0 || a_tcp->curdir != DIR_C2S)return;
+	
+    struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx);
+    if (pkts == NULL)
+    {
+        pkts=(struct frag_chello *)calloc(sizeof(struct frag_chello), 1);
+    }
+	if(pkts->finish == 1)return;
+	const void *p = get_current_rawpkt_from_streaminfo(a_tcp);
+	struct detain_pkt *dpkt=MESA_rawpkt_detain(a_tcp, p);
+	if(dpkt)
+	{
+		pkts->p[pkts->p_sz]=dpkt;
+		pkts->p_sz+=1;
+	}
+    stream_bridge_async_data_put(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx, pkts);
+	return;
+}
+
+static void ssl_detain_chello_finish(const struct streaminfo *a_tcp)
+{
+	if(g_ssl_runtime_para.detain_frag_chello_enable == 0)return;
+	struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx);
+	if(pkts)pkts->finish=1;
+	return;
+}
+
 int ssl_parse_message(const struct streaminfo *a_tcp, struct ssl_runtime_context *ssl_context, char *payload, int payload_len, int thread_seq, const void *a_packet)
 {
 	int offset=0;
@@ -1013,10 +1045,11 @@ int ssl_parse_message(const struct streaminfo *a_tcp, struct ssl_runtime_context
 			if((payload_len-offset) < one_record_len)
 			{
 				ssl_trunk_cache(ssl_context, payload+offset, payload_len-offset, thread_seq);
-				break; //cache
+				if(*(unsigned char *)((ssl_context->record.cache_buff)+sizeof(struct ssl_record_header))==CLIENT_HELLO)
+					ssl_detain_frag_chello(a_tcp);
+                break; //cache
 			}
-			
-			offset+=SSL_RECORD_HDRLEN;
+            offset+=SSL_RECORD_HDRLEN;
 		}
 		
 		switch (ssl_record->content_type)
@@ -1054,6 +1087,8 @@ int ssl_parse_message(const struct streaminfo *a_tcp, struct ssl_runtime_context
 			ssl_context->record.is_offset_header=1;
 			ssl_context->record.header=*ssl_record;
 			ssl_trunk_cache(ssl_context, payload+offset, payload_len-offset, thread_seq);
+			if(*(unsigned char *)((ssl_context->record.cache_buff)+sizeof(struct ssl_record_header))==CLIENT_HELLO)
+				ssl_detain_frag_chello(a_tcp);
 			break;
 		}
 		
@@ -1062,6 +1097,8 @@ int ssl_parse_message(const struct streaminfo *a_tcp, struct ssl_runtime_context
 
 	if(offset==payload_len)
 	{
+		if(ssl_context->record.cache_buff!=NULL && *(unsigned char *)((ssl_context->record.cache_buff)+sizeof(struct ssl_record_header))==CLIENT_HELLO)
+			ssl_detain_chello_finish(a_tcp);
 		ssl_trunk_free(ssl_context, thread_seq);
 	}
 

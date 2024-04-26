@@ -41,6 +41,16 @@ struct ssl_proto_tag
 	char buf[8];
 };
 
+
+#define SSL_FRAG_CHELLO_BRIDEGE_NAME "SSL_FRAG_CHELLO_BRIDGE"
+#define MAX_DETAIN_FRAG_CHELLO_NUM 8
+struct frag_chello
+{
+	struct detain_pkt *p[MAX_DETAIN_FRAG_CHELLO_NUM];
+	unsigned int p_sz;
+	unsigned int finish;
+};
+
 struct ssl_runtime_para
 { 	
 	unsigned long long 	ssl_interested_region_flag;
@@ -53,6 +63,9 @@ struct ssl_runtime_para
 	int proto_tag_id ;
 	int max_cache_len;
 	int parse_certificate_detail;
+	unsigned int detain_frag_chello_enable;
+	unsigned int max_check_c2s_num;
+	int frag_chello_exdata_idx;
 };
 
 struct ssl_business_info
