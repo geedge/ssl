@@ -51,6 +51,18 @@ struct frag_chello
 	unsigned int finish;
 };
 
+
+enum fs_metric
+{
+	FS_METRIC_DETAIN_FRAG_CHELLO_NUM = 0,
+	FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD,
+	FS_METRIC_DETAIN_FRAG_CHELLO_FREE,
+	FS_METRIC_DETAIN_FRAG_CHELLO_SESSION,
+	FS_METRIC_DETAIN_FRAG_CHELLO_FINISH,
+	FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT,
+	FS_METRIC_MAX
+};
+
 struct ssl_runtime_para
 { 	
 	unsigned long long 	ssl_interested_region_flag;
@@ -63,9 +75,10 @@ struct ssl_runtime_para
 	int proto_tag_id ;
 	int max_cache_len;
 	int parse_certificate_detail;
-	unsigned int detain_frag_chello_enable;
-	unsigned int max_check_c2s_num;
+	unsigned int detain_frag_chello_num;
 	int frag_chello_exdata_idx;
+	struct fieldstat_instance *fs;
+	int fs_metric_id[FS_METRIC_MAX];
 };
 
 struct ssl_business_info

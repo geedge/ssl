@@ -12,7 +12,7 @@
 #include "SSL_Message.h"
 #include "SSL_Proc.h"
 #include "SSL_Certificate.h"
-
+#include "fieldstat.h"
 
 
 #define SUITE_VALUELEN					2
@@ -988,20 +988,27 @@ int ssl_parse_version(const struct streaminfo *a_tcp, struct ssl_runtime_context
 
 static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 {
-	if(g_ssl_runtime_para.detain_frag_chello_enable == 0 || a_tcp->curdir != DIR_C2S)return;
+	if(g_ssl_runtime_para.detain_frag_chello_num == 0 || a_tcp->curdir != DIR_C2S || a_tcp->dir != DIR_DOUBLE)return;
 	
     struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx);
     if (pkts == NULL)
     {
         pkts=(struct frag_chello *)calloc(sizeof(struct frag_chello), 1);
+		if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION], 
+								1);
     }
 	if(pkts->finish == 1)return;
 	const void *p = get_current_rawpkt_from_streaminfo(a_tcp);
 	struct detain_pkt *dpkt=MESA_rawpkt_detain(a_tcp, p);
-	if(dpkt)
+	if(dpkt && pkts->p_sz<g_ssl_runtime_para.detain_frag_chello_num)
 	{
 		pkts->p[pkts->p_sz]=dpkt;
 		pkts->p_sz+=1;
+		if(pkts->p_sz==g_ssl_runtime_para.detain_frag_chello_num)pkts->finish=1;
+		if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_NUM], 
+								1);
 	}
     stream_bridge_async_data_put(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx, pkts);
 	return;
@@ -1009,9 +1016,12 @@ static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 
 static void ssl_detain_chello_finish(const struct streaminfo *a_tcp)
 {
-	if(g_ssl_runtime_para.detain_frag_chello_enable == 0)return;
+	if(g_ssl_runtime_para.detain_frag_chello_num == 0)return;
 	struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx);
 	if(pkts)pkts->finish=1;
+	if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH], 
+								1);
 	return;
 }
 
