@@ -241,15 +241,19 @@ static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int b
 	struct detain_pkt *p=NULL;
     if (pkts)
     {
+		if(pkts->p_sz > 0)	
+		{
+			if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT], 
+								1);
+		}
 		for(unsigned int i = 0; i < pkts->p_sz; i++)
 		{
             if (p)MESA_detain_pkt_free(p);
 			if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE], 
 								1);
-			if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
-								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT], 
-								1);
+
 		}
         free(pkts);
     }
@@ -281,12 +285,12 @@ extern "C" int SSL_INIT(void)
 		fieldstat_set_local_output(g_ssl_runtime_para.fs, "./log/ssl.status", "default");
 		fieldstat_enable_prometheus_output(g_ssl_runtime_para.fs);
 		fieldstat_instance_start(g_ssl_runtime_para.fs);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_NUM]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_NUM",NULL, 0); 
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FORWARD",NULL, 0);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FREE",NULL, 0);
 		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_SESS",NULL, 0);
 		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FIN",NULL, 0);
 		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_TOT",NULL, 0);
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_NUM]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_NUM",NULL, 0); 
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FORWARD",NULL, 0);
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FREE",NULL, 0);
 	}
 
 
