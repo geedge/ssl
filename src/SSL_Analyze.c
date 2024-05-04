@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stream_inc/stream_base.h>
 #include <string.h>
 #include <pthread.h>
 #include <dlfcn.h>
@@ -208,6 +209,8 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 extern "C" char SSL_DETAIN_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_seq, const void *a_packet)
 {
 	if(g_ssl_runtime_para.detain_frag_chello_num==0)return APP_STATE_DROPME;
+
+	if(a_tcp->pktstate == OP_STATE_CLOSE)return APP_STATE_DROPME;
 
 	if(a_tcp->ptcpdetail->serverpktnum <= (MAX_DETAIN_FRAG_CHELLO_NUM+2))
 	{
