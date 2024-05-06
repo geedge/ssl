@@ -252,6 +252,7 @@ static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int b
 		}
 		for(unsigned int i = 0; i < pkts->p_sz; i++)
 		{
+			p=pkts->p[i];
             if (p)MESA_detain_pkt_free(p);
 			if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE], 
