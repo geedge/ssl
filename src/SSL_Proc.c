@@ -166,6 +166,7 @@ struct ssl_serial_string g_astCipherSuit[] =
 
 int BtoL4BytesNum(const char *pcData)
 {
+	if(pcData==NULL) return 0;
     int uiLength = 0;
     uiLength = pcData[0];
     uiLength = (uiLength << 8) + (unsigned char)pcData[1];
@@ -176,6 +177,7 @@ int BtoL4BytesNum(const char *pcData)
 
 int BtoL3BytesNum(const char *pcData)
 {
+	if(pcData==NULL) return 0;
     int uiLength = 0;
     uiLength = pcData[0];
     uiLength = (uiLength << 8) + (unsigned char)pcData[1];
@@ -186,6 +188,7 @@ int BtoL3BytesNum(const char *pcData)
 
 int BtoL2BytesNum(const char *pcData)
 {
+	if(pcData==NULL) return 0;
     int uiLength = 0;
     uiLength = pcData[0];
     uiLength = (uiLength << 8) + (unsigned char)pcData[1];
@@ -195,6 +198,7 @@ int BtoL2BytesNum(const char *pcData)
 
 int BtoL1BytesNum(const char *pcData)
 {
+	if(pcData==NULL) return 0;
     int uiLength = 0;
     uiLength = pcData[0];
 
