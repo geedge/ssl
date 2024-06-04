@@ -34,6 +34,8 @@ add_library(${lib_name}_test_plug SHARED ${lib_name}_test_plug.cpp)
 target_link_libraries(${lib_name}_test_plug MESA_prof_load cjson)
 set_target_properties(${lib_name}_test_plug  PROPERTIES PREFIX "")
 
+add_test(NAME UPDATE_SAPP_LOG COMMAND bash -c "sed -i 's/fatal/info/' ${PROTO_TEST_RUN_DIR}/etc/sapp_log.conf")
+
 add_test(NAME COPY_SO COMMAND sh -c "cp ${CMAKE_BINARY_DIR}/${lib_name}.so ${PROTO_TEST_RUN_DIR}/plug/protocol/${lib_name}/${lib_name}.so")
 add_test(NAME COPY_TEST_SO COMMAND sh -c "cp ${CMAKE_CURRENT_BINARY_DIR}/${lib_name}_test_plug.so ${PROTO_TEST_RUN_DIR}/plug/business/${lib_name}_test_plug/${lib_name}_test_plug.so")
 
