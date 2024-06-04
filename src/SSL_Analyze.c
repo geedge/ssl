@@ -161,6 +161,10 @@ int ssl_readMainConf(const char* filename)
 	MESA_load_profile_string_def(filename, "FUNCTION", "STAT_FIELD_DST_IP", g_ssl_prog_para.stat_dst_ip, 64, "127.0.0.1");
 	MESA_load_profile_int_def(filename, "FUNCTION", "STAT_FIELD_DST_PORT", &g_ssl_prog_para.stat_dst_port, 8125);
 
+	MESA_load_profile_uint_def(filename, "FUNCTION", "DETAIN_FRAG_CHELLO_NUM", &g_ssl_prog_para.detain_frag_chello_num, 0);
+	g_ssl_prog_para.detain_frag_chello_num= MIN(g_ssl_prog_para.detain_frag_chello_num, MAX_DETAIN_FRAG_CHELLO_NUM);
+
+
 	return 0;
 }
 
@@ -196,6 +200,68 @@ void ssl_proto_tag_free(int thread_seq, void *value)
 	return;
 }
 
+extern "C" char SSL_DETAIN_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_seq, const void *a_packet)
+{
+	if(g_ssl_prog_para.detain_frag_chello_num==0)return APP_STATE_DROPME;
+
+	if(a_tcp->pktstate == OP_STATE_CLOSE)return APP_STATE_DROPME;
+
+	if(a_tcp->ptcpdetail->serverpktnum <= (MAX_DETAIN_FRAG_CHELLO_NUM+2))
+	{
+        if (a_tcp->curdir == DIR_C2S)// only c2s packet trigger frag chello finish
+        {
+            struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
+            if (pkts && pkts->finish == 1)
+            {
+                struct detain_pkt *p = NULL;
+                for (unsigned int i = 0; i < pkts->p_sz; i++)
+                {
+                    p = pkts->p[i];
+                    if (p)MESA_detain_pkt_forward_based_on_stream(a_tcp, p);
+					if(g_ssl_prog_para.stat_handler)
+					{
+						FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD], 0, FS_OP_ADD, 1);		
+					}
+                    pkts->p[i] = NULL;
+                }
+                pkts->p_sz = 0;
+        	    return APP_STATE_DROPME;
+            }
+        }
+		return APP_STATE_GIVEME;
+    }
+	return APP_STATE_DROPME;
+}
+
+static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int bridge_id, void *data)
+{
+    struct frag_chello *pkts = (struct frag_chello *)data;
+	struct detain_pkt *p=NULL;
+    if (pkts)
+    {
+		if(pkts->p_sz > 0)	
+		{
+			if(g_ssl_prog_para.stat_handler)
+			{
+				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT], 0, FS_OP_ADD, 1);						
+			}
+		}
+		for(unsigned int i = 0; i < pkts->p_sz; i++)
+		{
+			p=pkts->p[i];
+            if (p)MESA_detain_pkt_free(p);
+			if(g_ssl_prog_para.stat_handler)
+			{
+				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FREE], 0, FS_OP_ADD, 1);						
+			}
+
+		}
+        free(pkts);
+    }
+    return;
+}
+
+
 int SSL_INIT(void)
 {
 	memset(&g_ssl_prog_para,0,sizeof(ssl_prog_runtime_parameter_t));	
@@ -210,6 +276,11 @@ int SSL_INIT(void)
 	g_ssl_prog_para.proto_tag_id  = project_producer_register("MESA_PROTO","struct",ssl_proto_tag_free);
 	ssl_ja3_init();
 
+	if(g_ssl_prog_para.detain_frag_chello_num>0)
+	{
+		g_ssl_prog_para.frag_chello_exdata_idx=stream_bridge_build(SSL_FRAG_CHELLO_BRIDEGE_NAME, "w");
+		stream_bridge_register_data_free_cb(g_ssl_prog_para.frag_chello_exdata_idx, ssl_retain_packet_bridge_free);
+	}
 	
 	if(g_ssl_prog_para.stat_cycle)
 	{	
@@ -231,6 +302,13 @@ int SSL_INIT(void)
 		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_s2c_pkts");
 		g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_bytes");
 		g_ssl_prog_para.stat_field[SSL_STAT_BITS_S2C] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_s2c_bytes");	
+
+		g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_NUM] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"FRAG_CH_NUM");	
+		g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"FRAG_CH_FORWARD");	
+		g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FREE] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"FRAG_CH_FREE");	
+		g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"FRAG_CH_SESS");	
+		g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"FRAG_CH_FIN");	
+		g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"FRAG_CH_TOT");	
 		FS_start(g_ssl_prog_para.stat_handler);
 	}
 	return 0;

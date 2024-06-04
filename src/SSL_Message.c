@@ -925,6 +925,50 @@ UCHAR ssl_analyseSsl(char *pcSslData, int iDataLen, int *res, ssl_stream *a_ssl_
 	return SSL_RETURN_NORM;
 }
 
+#include "field_stat2.h"
+static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
+{
+	if(g_ssl_prog_para.detain_frag_chello_num == 0 || a_tcp->curdir != DIR_C2S || a_tcp->dir != DIR_DOUBLE)return;
+	
+    struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
+    if (pkts == NULL)
+    {
+        pkts=(struct frag_chello *)calloc(sizeof(struct frag_chello), 1);
+		if(g_ssl_prog_para.stat_handler)
+		{
+			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION], 0, FS_OP_ADD, 1);
+		}
+    }
+	if(pkts->finish == 1)return;
+	const void *p = get_current_rawpkt_from_streaminfo(a_tcp);
+	struct detain_pkt *dpkt=MESA_rawpkt_detain(a_tcp, p);
+	if(dpkt && pkts->p_sz<g_ssl_prog_para.detain_frag_chello_num)
+	{
+		pkts->p[pkts->p_sz]=dpkt;
+		pkts->p_sz+=1;
+		if(pkts->p_sz==g_ssl_prog_para.detain_frag_chello_num)pkts->finish=1;
+		if(g_ssl_prog_para.stat_handler)
+		{
+			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_NUM], 0, FS_OP_ADD, 1);	
+		}
+	}
+    stream_bridge_async_data_put(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx, pkts);
+	return;
+}
+
+static void ssl_detain_chello_finish(const struct streaminfo *a_tcp)
+{
+	if(g_ssl_prog_para.detain_frag_chello_num == 0)return;
+	struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
+	if(pkts)pkts->finish=1;
+	if(g_ssl_prog_para.stat_handler)
+	{	
+		FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH], 0, FS_OP_ADD, 1);	
+	}
+	return;
+}
+
+
 UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, void *a_packet)
 {
 	/**variables define, and initialise**/
@@ -974,6 +1018,7 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, vo
 		a_ssl_stream->uiCurBuffLen += iSslDateLen;
 		iSslDateLen = a_ssl_stream->uiCurBuffLen;
 		pcSslData = a_ssl_stream->pcSslBuffer;
+		ssl_detain_frag_chello(a_tcp);
 	}
 	else
 	{
@@ -990,6 +1035,7 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, vo
 	/*is ssl_stream, need buffer data*/
 	if (iRet < 0 || iRet >= iSslDateLen)
 	{
+		ssl_detain_chello_finish(a_tcp);
 		a_ssl_stream->uiCurBuffLen = 0;
 	}
 	else
@@ -1002,6 +1048,7 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, vo
 		}
 		fn_vMemCpy(a_ssl_stream->pcSslBuffer, (int)a_ssl_stream->uiMaxBuffLen, pcSslData + iRet, (int)(iSslDateLen - iRet));
 		a_ssl_stream->uiCurBuffLen = iSslDateLen - iRet;
+		ssl_detain_frag_chello(a_tcp);
 	}
 	return return_val;
 }

@@ -47,11 +47,21 @@ typedef long atomic_t;
 #define MAX_REGION_NUM 					15
 #define REGION_NAME_LEN 				32
 
-#define SSL_STAT_PKTS_C2S				0
-#define SSL_STAT_PKTS_S2C				1
-#define SSL_STAT_BITS_C2S				2
-#define SSL_STAT_BITS_S2C				3
-#define SSL_MAX_STAT_FIELD				4
+enum fs_metric
+{
+	SSL_STAT_PKTS_C2S = 0,
+	SSL_STAT_PKTS_S2C,
+	SSL_STAT_BITS_C2S,
+	SSL_STAT_BITS_S2C,
+	FS_METRIC_DETAIN_FRAG_CHELLO_NUM,
+	FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD,
+	FS_METRIC_DETAIN_FRAG_CHELLO_FREE,
+	FS_METRIC_DETAIN_FRAG_CHELLO_SESSION,
+	FS_METRIC_DETAIN_FRAG_CHELLO_FINISH,
+	FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT,
+	FS_METRIC_MAX
+};
+
 
 typedef struct ssl_prog_runtime_parameter_t
 { 	
@@ -65,20 +75,34 @@ typedef struct ssl_prog_runtime_parameter_t
 	int 				stat_cycle;		
 	int 				ssl_switch_no_biz;
 	
-	int					stat_field[SSL_MAX_STAT_FIELD];	
+	int					stat_field[FS_METRIC_MAX];	
 	int                 stat_dst_port;
-	uint64_t			stat_value[SSL_MAX_STAT_FIELD];	
+	uint64_t			stat_value[FS_METRIC_MAX];	
 	char 				stat_filename[256];
 	char                stat_dst_ip[64];
 	char                stat_appname[16];
 	
 	int					proto_tag_id ;
+
+	unsigned int detain_frag_chello_num;
+	int frag_chello_exdata_idx;
+
 }ssl_prog_runtime_parameter_t;
 
 struct ssl_proto_tag_t
 {    
 	char buf[8];
 };
+
+#define SSL_FRAG_CHELLO_BRIDEGE_NAME "SSL_FRAG_CHELLO_BRIDGE"
+#define MAX_DETAIN_FRAG_CHELLO_NUM 8
+struct frag_chello
+{
+	struct detain_pkt *p[MAX_DETAIN_FRAG_CHELLO_NUM];
+	unsigned int p_sz;
+	unsigned int finish;
+};
+
 
 #ifdef __cplusplus
 extern "C" {
