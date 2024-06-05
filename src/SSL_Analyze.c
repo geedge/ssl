@@ -210,21 +210,21 @@ extern "C" char SSL_DETAIN_ENTRY(const struct streaminfo *a_tcp, void**pme, int 
 	{
         if (a_tcp->curdir == DIR_C2S)// only c2s packet trigger frag chello finish
         {
-            struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
+            struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
             if (pkts && pkts->finish == 1)
             {
                 struct detain_pkt *p = NULL;
-                for (unsigned int i = 0; i < pkts->p_sz; i++)
+                for (unsigned int i = 0; i < pkts->frag_chello.p_sz; i++)
                 {
-                    p = pkts->p[i];
+                    p = pkts->frag_chello.p[i];
                     if (p)MESA_detain_pkt_forward_based_on_stream(a_tcp, p);
 					if(g_ssl_prog_para.stat_handler)
 					{
 						FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD], 0, FS_OP_ADD, 1);		
 					}
-                    pkts->p[i] = NULL;
+                    pkts->frag_chello.p[i] = NULL;
                 }
-                pkts->p_sz = 0;
+                pkts->frag_chello.p_sz = 0;
         	    return APP_STATE_DROPME;
             }
         }
@@ -233,22 +233,23 @@ extern "C" char SSL_DETAIN_ENTRY(const struct streaminfo *a_tcp, void**pme, int 
 	return APP_STATE_DROPME;
 }
 
+
 static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int bridge_id, void *data)
 {
-    struct frag_chello *pkts = (struct frag_chello *)data;
+    struct frag_chello_internal *pkts = (struct frag_chello_internal *)data;
 	struct detain_pkt *p=NULL;
     if (pkts)
     {
-		if(pkts->p_sz > 0)	
+		if(pkts->frag_chello.p_sz > 0)	
 		{
 			if(g_ssl_prog_para.stat_handler)
 			{
 				FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT], 0, FS_OP_ADD, 1);						
 			}
 		}
-		for(unsigned int i = 0; i < pkts->p_sz; i++)
+		for(unsigned int i = 0; i < pkts->frag_chello.p_sz; i++)
 		{
-			p=pkts->p[i];
+			p=pkts->frag_chello.p[i];
             if (p)MESA_detain_pkt_free(p);
 			if(g_ssl_prog_para.stat_handler)
 			{
@@ -261,6 +262,14 @@ static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int b
     return;
 }
 
+void ssl_frag_chello_free(struct streaminfo *a_tcp)
+{
+	if(g_ssl_prog_para.detain_frag_chello_num == 0)return;
+    struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);	
+	ssl_retain_packet_bridge_free(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx, pkts);
+	stream_bridge_async_data_put(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx, NULL);	
+	return;
+}
 
 int SSL_INIT(void)
 {

@@ -332,6 +332,17 @@ int ssl_ja3_init(void);
 struct _ssl_ja3_info_t *ssl_get_ja3_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq);
 struct _ssl_ja3s_info_t *ssl_get_ja3s_fingerprint(struct streaminfo *stream, unsigned char *payload, int payload_len, int thread_seq);
 
+#define MAX_DETAIN_FRAG_CHELLO_NUM 8
+struct ssl_frag_chello
+{
+	struct detain_pkt *p[MAX_DETAIN_FRAG_CHELLO_NUM];
+	unsigned int p_sz;
+};
+
+struct ssl_frag_chello *ssl_frag_chello_get0(struct streaminfo *stream);
+void ssl_frag_chello_free(struct streaminfo *stream);
+
+
 #ifdef __cplusplus
 }
 #endif

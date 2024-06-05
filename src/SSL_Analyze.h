@@ -95,11 +95,9 @@ struct ssl_proto_tag_t
 };
 
 #define SSL_FRAG_CHELLO_BRIDEGE_NAME "SSL_FRAG_CHELLO_BRIDGE"
-#define MAX_DETAIN_FRAG_CHELLO_NUM 8
-struct frag_chello
+struct frag_chello_internal
 {
-	struct detain_pkt *p[MAX_DETAIN_FRAG_CHELLO_NUM];
-	unsigned int p_sz;
+	struct ssl_frag_chello frag_chello;
 	unsigned int finish;
 };
 

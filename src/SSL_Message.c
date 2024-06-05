@@ -926,14 +926,26 @@ UCHAR ssl_analyseSsl(char *pcSslData, int iDataLen, int *res, ssl_stream *a_ssl_
 }
 
 #include "field_stat2.h"
+
+struct ssl_frag_chello *ssl_frag_chello_get0(struct streaminfo *a_tcp)
+{
+	if(g_ssl_prog_para.detain_frag_chello_num == 0 || a_tcp->curdir != DIR_C2S || a_tcp->dir != DIR_DOUBLE)return NULL;
+    struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);	
+	if(pkts)
+	{
+		return &pkts->frag_chello;
+	}
+	return NULL;
+}
+
 static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 {
 	if(g_ssl_prog_para.detain_frag_chello_num == 0 || a_tcp->curdir != DIR_C2S || a_tcp->dir != DIR_DOUBLE)return;
 	
-    struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
+    struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
     if (pkts == NULL)
     {
-        pkts=(struct frag_chello *)calloc(sizeof(struct frag_chello), 1);
+        pkts=(struct frag_chello_internal *)calloc(sizeof(struct frag_chello_internal), 1);
 		if(g_ssl_prog_para.stat_handler)
 		{
 			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION], 0, FS_OP_ADD, 1);
@@ -942,11 +954,11 @@ static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 	if(pkts->finish == 1)return;
 	const void *p = get_current_rawpkt_from_streaminfo(a_tcp);
 	struct detain_pkt *dpkt=MESA_rawpkt_detain(a_tcp, p);
-	if(dpkt && pkts->p_sz<g_ssl_prog_para.detain_frag_chello_num)
+	if(dpkt && pkts->frag_chello.p_sz<g_ssl_prog_para.detain_frag_chello_num)
 	{
-		pkts->p[pkts->p_sz]=dpkt;
-		pkts->p_sz+=1;
-		if(pkts->p_sz==g_ssl_prog_para.detain_frag_chello_num)pkts->finish=1;
+		pkts->frag_chello.p[pkts->frag_chello.p_sz]=dpkt;
+		pkts->frag_chello.p_sz+=1;
+		if(pkts->frag_chello.p_sz==g_ssl_prog_para.detain_frag_chello_num)pkts->finish=1;
 		if(g_ssl_prog_para.stat_handler)
 		{
 			FS_operate(g_ssl_prog_para.stat_handler, g_ssl_prog_para.stat_field[FS_METRIC_DETAIN_FRAG_CHELLO_NUM], 0, FS_OP_ADD, 1);	
@@ -959,7 +971,7 @@ static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 static void ssl_detain_chello_finish(const struct streaminfo *a_tcp)
 {
 	if(g_ssl_prog_para.detain_frag_chello_num == 0)return;
-	struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
+	struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
 	if(pkts)pkts->finish=1;
 	if(g_ssl_prog_para.stat_handler)
 	{	
