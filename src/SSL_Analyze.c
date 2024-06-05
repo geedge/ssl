@@ -271,6 +271,10 @@ void ssl_frag_chello_free(struct streaminfo *a_tcp)
 	return;
 }
 
+
+extern "C" int SSL_DEFER_INIT(void){return 0;};
+extern "C" void SSL_DEFER_DESTROY(void){};
+
 int SSL_INIT(void)
 {
 	memset(&g_ssl_prog_para,0,sizeof(ssl_prog_runtime_parameter_t));	
@@ -305,8 +309,8 @@ int SSL_INIT(void)
 		value = 1;
 		FS_set_para(g_ssl_prog_para.stat_handler, CREATE_THREAD, &value, sizeof(value));	
 		FS_set_para(g_ssl_prog_para.stat_handler, APP_NAME, g_ssl_prog_para.stat_appname, strlen(g_ssl_prog_para.stat_appname)+1);
-		FS_set_para(g_ssl_prog_para.stat_handler, STATS_SERVER_IP, g_ssl_prog_para.stat_dst_ip, strlen(g_ssl_prog_para.stat_dst_ip)+1);
-		FS_set_para(g_ssl_prog_para.stat_handler, STATS_SERVER_PORT, &g_ssl_prog_para.stat_dst_port, sizeof(g_ssl_prog_para.stat_dst_port));
+		//FS_set_para(g_ssl_prog_para.stat_handler, STATS_SERVER_IP, g_ssl_prog_para.stat_dst_ip, strlen(g_ssl_prog_para.stat_dst_ip)+1);
+		//FS_set_para(g_ssl_prog_para.stat_handler, STATS_SERVER_PORT, &g_ssl_prog_para.stat_dst_port, sizeof(g_ssl_prog_para.stat_dst_port));
 		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_pkts");
 		g_ssl_prog_para.stat_field[SSL_STAT_PKTS_S2C] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_s2c_pkts");
 		g_ssl_prog_para.stat_field[SSL_STAT_BITS_C2S] = FS_register(g_ssl_prog_para.stat_handler,FS_STYLE_FIELD,FS_CALC_CURRENT,"ssl_c2s_bytes");

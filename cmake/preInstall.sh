@@ -15,3 +15,7 @@ fi
 if [[ -z `grep -rn 'JA3_FINGERPRINT_LABEL' ${DST}/etc/project_list.conf` ]];then
 	echo "JA3_FINGERPRINT_LABEL	struct" >>  ${DST}/etc/project_list.conf
 fi
+
+if [[ -z `grep -rn 'ssl_defer.inf' ${DST}/plug/conflist.inf` ]];then
+	sed -i '$a ./plug/protocol/ssl/ssl_defer.inf' ${DST}/plug/conflist.inf
+fi

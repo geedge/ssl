@@ -8,7 +8,7 @@ include(ExternalProject)
 
 ExternalProject_Add(ProtoTest PREFIX ProtoTest
         URL ${CMAKE_CURRENT_SOURCE_DIR}/test_protocol_run.zip
-        URL_MD5 71d8284b59af0286b5f31f0a3160bc44  
+        URL_MD5 7e9f0f8345ca83665b4314cddc06ea96  
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
@@ -27,14 +27,12 @@ set(PROTO_TEST_RUN_DIR ${SOURCE_DIR})
 
 add_executable(proto_test_main IMPORTED GLOBAL)
 add_dependencies(proto_test_main ProtoTest)
-set_property(TARGET proto_test_main PROPERTY IMPORTED_LOCATION ${SOURCE_DIR}/test_protocol_plug_main)
+set_property(TARGET proto_test_main PROPERTY IMPORTED_LOCATION ${SOURCE_DIR}/plugin_test_main)
 
 
 add_library(${lib_name}_test_plug SHARED ${lib_name}_test_plug.cpp)
 target_link_libraries(${lib_name}_test_plug MESA_prof_load cjson)
 set_target_properties(${lib_name}_test_plug  PROPERTIES PREFIX "")
-
-add_test(NAME UPDATE_SAPP_LOG COMMAND bash -c "sed -i 's/fatal/info/' ${PROTO_TEST_RUN_DIR}/etc/sapp_log.conf")
 
 add_test(NAME COPY_SO COMMAND sh -c "cp ${CMAKE_BINARY_DIR}/${lib_name}.so ${PROTO_TEST_RUN_DIR}/plug/protocol/${lib_name}/${lib_name}.so")
 add_test(NAME COPY_TEST_SO COMMAND sh -c "cp ${CMAKE_CURRENT_BINARY_DIR}/${lib_name}_test_plug.so ${PROTO_TEST_RUN_DIR}/plug/business/${lib_name}_test_plug/${lib_name}_test_plug.so")

@@ -929,7 +929,7 @@ UCHAR ssl_analyseSsl(char *pcSslData, int iDataLen, int *res, ssl_stream *a_ssl_
 
 struct ssl_frag_chello *ssl_frag_chello_get0(struct streaminfo *a_tcp)
 {
-	if(g_ssl_prog_para.detain_frag_chello_num == 0 || a_tcp->curdir != DIR_C2S || a_tcp->dir != DIR_DOUBLE)return NULL;
+	if(g_ssl_prog_para.detain_frag_chello_num == 0)return NULL;
     struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);	
 	if(pkts)
 	{
@@ -940,7 +940,8 @@ struct ssl_frag_chello *ssl_frag_chello_get0(struct streaminfo *a_tcp)
 
 static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 {
-	if(g_ssl_prog_para.detain_frag_chello_num == 0 || a_tcp->curdir != DIR_C2S || a_tcp->dir != DIR_DOUBLE)return;
+	if(g_ssl_prog_para.detain_frag_chello_num == 0)return;
+	if(a_tcp->curdir != DIR_C2S)return;
 	
     struct frag_chello_internal *pkts = (struct frag_chello_internal *)stream_bridge_async_data_get(a_tcp, g_ssl_prog_para.frag_chello_exdata_idx);
     if (pkts == NULL)
@@ -1030,7 +1031,8 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, vo
 		a_ssl_stream->uiCurBuffLen += iSslDateLen;
 		iSslDateLen = a_ssl_stream->uiCurBuffLen;
 		pcSslData = a_ssl_stream->pcSslBuffer;
-		ssl_detain_frag_chello(a_tcp);
+		if(*(unsigned char *)(a_ssl_stream->pcSslBuffer)==CLIENT_HELLO)
+			ssl_detain_frag_chello(a_tcp);
 	}
 	else
 	{
@@ -1047,7 +1049,8 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, vo
 	/*is ssl_stream, need buffer data*/
 	if (iRet < 0 || iRet >= iSslDateLen)
 	{
-		ssl_detain_chello_finish(a_tcp);
+		if(a_ssl_stream->pcSslBuffer!=NULL && *(unsigned char *)(a_ssl_stream->pcSslBuffer)==CLIENT_HELLO)
+			ssl_detain_chello_finish(a_tcp);
 		a_ssl_stream->uiCurBuffLen = 0;
 	}
 	else
@@ -1060,7 +1063,8 @@ UCHAR ssl_analyseStream(struct streaminfo *a_tcp, void **pme, int thread_seq, vo
 		}
 		fn_vMemCpy(a_ssl_stream->pcSslBuffer, (int)a_ssl_stream->uiMaxBuffLen, pcSslData + iRet, (int)(iSslDateLen - iRet));
 		a_ssl_stream->uiCurBuffLen = iSslDateLen - iRet;
-		ssl_detain_frag_chello(a_tcp);
+		if(*(unsigned char *)(a_ssl_stream->pcSslBuffer)==CLIENT_HELLO)
+			ssl_detain_frag_chello(a_tcp);
 	}
 	return return_val;
 }
