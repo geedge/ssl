@@ -17,7 +17,7 @@
 #include "ssl.h"
 #include <MESA/MESA_prof_load.h>
 #include "SSL_Proc.h"
-#include "fieldstat.h"
+#include "fieldstat/fieldstat_easy.h"
 
 #include <assert.h>
 
@@ -224,8 +224,11 @@ extern "C" char SSL_DETAIN_ENTRY(const struct streaminfo *a_tcp, void**pme, int 
                 {
                     p = pkts->p[i];
                     if (p)MESA_detain_pkt_forward_based_on_stream(a_tcp, p);
-					if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+					if(g_ssl_runtime_para.fs)fieldstat_easy_counter_incrby(g_ssl_runtime_para.fs, 
+								a_tcp->threadnum,
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD], 
+								NULL,
+								0,
 								1);
                     pkts->p[i] = NULL;
                 }
@@ -246,16 +249,22 @@ static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int b
     {
 		if(pkts->p_sz > 0)	
 		{
-			if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+			if(g_ssl_runtime_para.fs)fieldstat_easy_counter_incrby(g_ssl_runtime_para.fs, 
+								stream->threadnum,
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT], 
+								NULL,
+								0,
 								1);
 		}
 		for(unsigned int i = 0; i < pkts->p_sz; i++)
 		{
 			p=pkts->p[i];
             if (p)MESA_detain_pkt_free(p);
-			if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+			if(g_ssl_runtime_para.fs)fieldstat_easy_counter_incrby(g_ssl_runtime_para.fs, 
+								stream->threadnum,
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE], 
+								NULL,
+								0,
 								1);
 
 		}
@@ -284,17 +293,17 @@ extern "C" int SSL_INIT(void)
 	MESA_load_profile_uint_def(filename, "SSL", "SSL_STAT_REFRESH_S", &refresh_s, 0);
 	if(refresh_s > 0)
 	{
-		g_ssl_runtime_para.fs=fieldstat_instance_new("SSL_DECODER");
-		fieldstat_set_output_interval(g_ssl_runtime_para.fs, refresh_s * 1000);
-		fieldstat_set_local_output(g_ssl_runtime_para.fs, "./log/ssl.status", "default");
-		fieldstat_enable_prometheus_output(g_ssl_runtime_para.fs);
-		fieldstat_instance_start(g_ssl_runtime_para.fs);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_SESS",NULL, 0);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FIN",NULL, 0);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_TOT",NULL, 0);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_NUM]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_NUM",NULL, 0); 
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FORWARD",NULL, 0);
-		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE]=fieldstat_register(g_ssl_runtime_para.fs, FIELD_TYPE_COUNTER, "FRAG_CH_FREE",NULL, 0);
+		MESA_load_profile_string_def(filename, "SSL", "SSL_STAT_FILE", g_ssl_runtime_para.stat_filename, sizeof(g_ssl_runtime_para.stat_filename), "./metrics/ssl_status.json");
+		MESA_load_profile_string_def(filename, "SSL", "SSL_STAT_APPNAME", g_ssl_runtime_para.stat_appname, sizeof(g_ssl_runtime_para.stat_filename), "SSL_DECODER");
+		g_ssl_runtime_para.fs=fieldstat_easy_new(get_thread_count(), g_ssl_runtime_para.stat_appname, NULL, 0);
+		fieldstat_easy_enable_auto_output(g_ssl_runtime_para.fs, g_ssl_runtime_para.stat_filename, refresh_s);
+		fieldstat_easy_enable_delta_in_active_output(g_ssl_runtime_para.fs);
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_SESS");
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs,  "FRAG_CH_FIN");
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_TOT");
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_NUM]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_NUM"); 
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FORWARD]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_FORWARD");
+		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FREE]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_FREE");
 	}
 
 
@@ -313,7 +322,7 @@ extern "C" void SSL_DESTROY(void)
 {
 	if(g_ssl_runtime_para.fs != NULL)
 	{
-		fieldstat_instance_free(g_ssl_runtime_para.fs);
+		fieldstat_easy_free(g_ssl_runtime_para.fs);
 	}
 	return;
 }

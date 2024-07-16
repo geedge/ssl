@@ -12,7 +12,7 @@
 #include "SSL_Message.h"
 #include "SSL_Proc.h"
 #include "SSL_Certificate.h"
-#include "fieldstat.h"
+#include "fieldstat/fieldstat_easy.h"
 
 
 #define SUITE_VALUELEN					2
@@ -994,8 +994,11 @@ static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
     if (pkts == NULL)
     {
         pkts=(struct frag_chello *)calloc(sizeof(struct frag_chello), 1);
-		if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+		if(g_ssl_runtime_para.fs)fieldstat_easy_counter_incrby(g_ssl_runtime_para.fs,
+								a_tcp->threadnum, 
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION], 
+								NULL,
+								0,
 								1);
     }
 	if(pkts->finish == 1)return;
@@ -1006,8 +1009,11 @@ static void ssl_detain_frag_chello(const struct streaminfo *a_tcp)
 		pkts->p[pkts->p_sz]=dpkt;
 		pkts->p_sz+=1;
 		if(pkts->p_sz==g_ssl_runtime_para.detain_frag_chello_num)pkts->finish=1;
-		if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+		if(g_ssl_runtime_para.fs)fieldstat_easy_counter_incrby(g_ssl_runtime_para.fs, 
+								a_tcp->threadnum,
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_NUM], 
+								NULL,
+								0,
 								1);
 	}
     stream_bridge_async_data_put(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx, pkts);
@@ -1019,8 +1025,11 @@ static void ssl_detain_chello_finish(const struct streaminfo *a_tcp)
 	if(g_ssl_runtime_para.detain_frag_chello_num == 0)return;
 	struct frag_chello *pkts = (struct frag_chello *)stream_bridge_async_data_get(a_tcp, g_ssl_runtime_para.frag_chello_exdata_idx);
 	if(pkts)pkts->finish=1;
-	if(g_ssl_runtime_para.fs)fieldstat_value_incrby(g_ssl_runtime_para.fs, 
+	if(g_ssl_runtime_para.fs)fieldstat_easy_counter_incrby(g_ssl_runtime_para.fs, 
+								a_tcp->threadnum,
 								g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH], 
+								NULL,
+								0,
 								1);
 	return;
 }

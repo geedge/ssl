@@ -70,14 +70,13 @@ struct ssl_runtime_para
 	unsigned short ssl_plugid;
 	char ssl_conf_regionname[MAX_REGION_NUM][REGION_NAME_LEN];
 	char stat_filename[256];
-	char stat_dst_ip[64];
 	char stat_appname[16];
 	int proto_tag_id ;
 	int max_cache_len;
 	int parse_certificate_detail;
 	unsigned int detain_frag_chello_num;
 	int frag_chello_exdata_idx;
-	struct fieldstat_instance *fs;
+	struct fieldstat_easy *fs;
 	int fs_metric_id[FS_METRIC_MAX];
 };
 

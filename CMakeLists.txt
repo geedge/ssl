@@ -61,7 +61,7 @@ file(GLOB SRC
     "src/*.cpp"
 )
 
-set(DEPEND_DYN_LIB MESA_handle_logger fieldstat3 MESA_prof_load)
+set(DEPEND_DYN_LIB MESA_handle_logger fieldstat4 MESA_prof_load)
 
 SET_SOURCE_FILES_PROPERTIES(${SRC} PROPERTIES LANGUAGE CXX )
 
