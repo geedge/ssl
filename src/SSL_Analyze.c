@@ -297,7 +297,7 @@ extern "C" int SSL_INIT(void)
 		MESA_load_profile_string_def(filename, "SSL", "SSL_STAT_APPNAME", g_ssl_runtime_para.stat_appname, sizeof(g_ssl_runtime_para.stat_filename), "SSL_DECODER");
 		g_ssl_runtime_para.fs=fieldstat_easy_new(get_thread_count(), g_ssl_runtime_para.stat_appname, NULL, 0);
 		fieldstat_easy_enable_auto_output(g_ssl_runtime_para.fs, g_ssl_runtime_para.stat_filename, refresh_s);
-		fieldstat_easy_enable_delta_in_active_output(g_ssl_runtime_para.fs);
+		//fieldstat_easy_enable_delta_in_active_output(g_ssl_runtime_para.fs);
 		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_SESSION]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_SESS");
 		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_FINISH]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs,  "FRAG_CH_FIN");
 		g_ssl_runtime_para.fs_metric_id[FS_METRIC_DETAIN_FRAG_CHELLO_TIMEOUT]=fieldstat_easy_register_counter(g_ssl_runtime_para.fs, "FRAG_CH_TOT");
