@@ -10,4 +10,5 @@ if [ $1 == 0 ]; then
 
 	sed -i '/ssl.inf/d' ${DST}/plug/conflist.inf
 	sed -i '/SSL/d' ${DST}/etc/entrylist.conf
+	sed -i '/ssl_defer.inf/d' ${DST}/plug/conflist.inf
 fi

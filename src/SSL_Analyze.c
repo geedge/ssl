@@ -273,6 +273,10 @@ static void ssl_retain_packet_bridge_free(const struct streaminfo *stream, int b
     return;
 }
 
+extern "C" int SSL_DEFER_INIT(void){return 0;};
+extern "C" void SSL_DEFER_DESTROY(void){};
+
+
 extern "C" int SSL_INIT(void)
 {
 	memset(&g_ssl_runtime_para, 0, sizeof(struct ssl_runtime_para));
