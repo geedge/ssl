@@ -49,6 +49,7 @@ const struct ssl_serial_string g_astCompression[] =
 
 const struct ssl_value2string ssl_version_list[] =
 {
+	{ TLCPV1_VERSION, 	"TLCP1.1" },
     { DTLSV1_0_VERSION, 	"DTLS1.0" },
     { DTLSV1_0_VERSION_NOT, "DTLS1.0(OpenSSL pre 0.9.8f)" },  
     { TLSV1_2_VERSION, 		"TLS1.2" },
@@ -236,7 +237,12 @@ unsigned short ssl_get_hello_version(unsigned char *pcData, unsigned int payload
 		return 0;
 	}
 
-	if (03 == pcData[4] && 1 == pcData[5])
+	if (1 == pcData[4] && 1 == pcData[5])
+	{
+		/*TLCP 1.1*/
+		return TLCPV1_VERSION;
+	}
+	else if (03 == pcData[4] && 1 == pcData[5])
 	{
 		/*TLS 1.0*/
 		return TLSV1_0_VERSION;
@@ -902,7 +908,12 @@ int ssl_identify_version(char *pcData, int payload_len)
 		return 0;
 	}
 
-	if (03 == pcData[1] && 1 == pcData[2])
+	if (01 == pcData[1] && 1 == pcData[2])
+	{
+		/*TLCP 1.1*/
+		return TLCPV1_VERSION;
+	}
+	else if (03 == pcData[1] && 1 == pcData[2])
 	{
 		/*TLS 1.0*/
 		return TLSV1_0_VERSION;

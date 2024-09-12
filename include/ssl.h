@@ -32,6 +32,7 @@ enum ssl_interested_region
 #define TLSV1_2_VERSION		0x0303
 #define DTLSV1_0_VERSION	0xfeff
 #define DTLSV1_0_VERSION_NOT 0x0100
+#define TLCPV1_VERSION		0x0101
 
 struct cdata_buf
 {

@@ -1,0 +1,27 @@
+[
+    {
+        "Tuple4": "192.168.54.245.47596>202.99.22.112.6443",
+        "ssl_sni": "wap.citicbank.cn",
+        "ssl_client_version": "TLCP1.1",
+        "ssl_ja3_hash": "3e8b40596a01530fa02d265ff3c397cc",
+        "ssl_ja3s_hash": "425270d1bb1ca2d7b07a2f70420d4c07",
+        "ssl_cert_version": "v3",
+        "ssl_cert_Issuer": "Beijing SM2 CA;BJCA;BJCA;;;;CN",
+        "ssl_cert_IssuerCN": "Beijing SM2 CA",
+        "ssl_cert_IssuerO": "BJCA",
+        "ssl_cert_IssuerC": "CN",
+        "ssl_cert_IssuerU": "BJCA",
+        "ssl_cert_Sub": "wap.citicbank.cn;中信银行股份有限公司;;;;北京;CN",
+        "ssl_cert_SubCN": "wap.citicbank.cn",
+        "ssl_cert_SubO": "中信银行股份有限公司",
+        "ssl_cert_SubC": "CN",
+        "ssl_cert_SubP": "北京",
+        "ssl_cert_SubAltName": "wap.citicbank.cn",
+        "ssl_cert_SerialNum": "0x1a1000000000047f95f8",
+        "ssl_cert_AgID": "1.2.156.10197.1.501",
+        "ssl_cert_From": "240408160000Z",
+        "ssl_cert_To": "250425155959Z",
+        "ssl_cert_SSLFPAg": "1.2.156.10197.1.501",
+        "name": "SSL_RESULT_1"
+    }
+]
