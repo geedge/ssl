@@ -196,14 +196,14 @@ int x509_parse_certificate_detail(struct ssl_certificate *certificate, char *cer
 	X509 *x509_handle = d2i_X509(NULL, (unsigned char const **)&cert_payload, cert_payload_len);
 	if (x509_handle == NULL) 
 	{
-		return SSL_FLASE;
+		return SSL_FALSE;
 	}
 	
     /*version*/
     int ver = X509_get_version(x509_handle);
     if(ver>CERT_VER_MAXNUM || ver<0) 
     {
-        state=SSL_FLASE;
+        state=SSL_FALSE;
         goto cert_return;
     }
 

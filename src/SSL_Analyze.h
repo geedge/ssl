@@ -33,9 +33,11 @@ typedef long atomic_t;
 #define MAX_REGION_NUM 					15
 #define REGION_NAME_LEN 				32
 
-#define SSL_KEY 								3
-#define SSL_TRUE 								1
-#define SSL_FLASE 								0
+#define SSL_KEY 		3
+#define SSL_CONTINUE	2
+#define SSL_TRUE 		1
+#define SSL_FALSE 		0
+
 struct ssl_proto_tag
 {
 	char buf[8];

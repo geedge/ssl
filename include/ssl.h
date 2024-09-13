@@ -75,13 +75,7 @@ struct ssl_encrypt_server_name
 	struct ssl_l2v record_digest;
 };
 
-#define MAX_EXTENSION_NUM	16
-struct ssl_extenstions
-{
-	unsigned short len;
-	unsigned short num;
-	struct ssl_l2tv extension[MAX_EXTENSION_NUM];
-};
+struct ssl_extenstions;
 
 #define MAX_JA_MD5_STR_LEN		128
 struct ssl_ja_fingerprint
@@ -102,7 +96,7 @@ struct ssl_client_hello
 	struct ssl_l2tv *encrypt_chello;
 	struct ssl_l2tv *session_ticket;
 	struct ssl_l2tv *alpn;
-	struct ssl_extenstions extensions;
+	struct ssl_extenstions *extensions;
 	struct ssl_encrypt_server_name esni;
 	char server_name[MAX_SERVER_NAME_LEN];
 	struct ssl_ja_fingerprint ja3;
@@ -119,7 +113,7 @@ struct ssl_server_hello
 	struct ssl_l1v session;
 	struct ssl_l2v ciphersuites;
 	struct ssl_l1v compress_method;
-	struct ssl_extenstions extensions;
+	struct ssl_extenstions *extensions;
 };
 
 struct ssl_new_session_ticket

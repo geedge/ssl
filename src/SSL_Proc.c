@@ -240,7 +240,7 @@ const char* ssl_get_suite_name(unsigned char* suite_value, unsigned short suite_
 int ssl_get_link_state(struct ssl_runtime_context *ssl_context)
 {
 	UCHAR state = 0;
-	if(SSL_FLASE==ssl_context->link_state)
+	if(SSL_FALSE==ssl_context->link_state)
 	{
 		if(SSL_TRUE==ssl_context->over_flag)
 			state = SESSION_STATE_CLOSE | SESSION_STATE_PENDING;

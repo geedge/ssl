@@ -5,12 +5,6 @@
 
 #define SSL_HEADER_LEN	5+1	//use the hand_shake first bytes
 
-#define SSL_KEY 		3
-#define SSL_CONTINUE	2
-#define SSL_TRUE 		1
-#define SSL_FLASE 		0
-
-
 #define RANDOM_TIME_LEN 			4
 #define SSL_RANDOM_SIZE 			28
 

@@ -120,9 +120,9 @@ int ssl_init_context(void **pme, int thread_seq)
 	struct ssl_runtime_context *ssl_context = (struct ssl_runtime_context *)dictator_malloc(thread_seq, sizeof(struct ssl_runtime_context));
 	memset(ssl_context, 0, sizeof(struct ssl_runtime_context));
 
-	ssl_context->link_state=SSL_FLASE;
-	ssl_context->over_flag=SSL_FLASE;
-	ssl_context->is_ssl_stream=SSL_FLASE;
+	ssl_context->link_state=SSL_FALSE;
+	ssl_context->over_flag=SSL_FALSE;
+	ssl_context->is_ssl_stream=SSL_FALSE;
 	ssl_context->version=UNKNOWN_VERSION;
 	ssl_context->business.return_value=PROT_STATE_GIVEME; 
 	
@@ -177,7 +177,7 @@ extern "C" char SSL_ENTRY(const struct streaminfo *a_tcp, void**pme, int thread_
 			break;
 	}
 
-	if(SSL_FLASE==return_val)
+	if(SSL_FALSE==return_val)
 	{
 		state=APP_STATE_DROPME;
 	}
