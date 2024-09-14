@@ -100,15 +100,24 @@ extern "C" unsigned char SSL_TEST_PLUG_ENTRY(stSessionInfo *session_info, void *
 			cJSON_AddStringToObject(ctx, "ssl_client_version", ssl_get_version_name(a_ssl->chello->version));
 		}
 
-		if(strlen(a_ssl->chello->ja3.md5) >0 && a_ssl->chello->ja3.md5_len > 0)
+		if(strlen(a_ssl->chello->ja3.value) >0)
 		{
-			cJSON_AddStringToObject(ctx, "ssl_ja3_hash", a_ssl->chello->ja3.md5);
+			cJSON_AddStringToObject(ctx, "ssl_ja3_hash", a_ssl->chello->ja3.value);
+		}
+
+		if(strlen(a_ssl->chello->ja4.value) >0)
+		{
+			cJSON_AddStringToObject(ctx, "ssl_ja4_hash", a_ssl->chello->ja4.value);
 		}
 	    break;
 	case SSL_SERVER_HELLO:
-		if (a_ssl->shello->ja3s.md5 != NULL && a_ssl->shello->ja3s.md5_len > 0)
+		if(strlen(a_ssl->shello->ja3s.value) >0)
 		{
-			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", a_ssl->shello->ja3s.md5);
+			cJSON_AddStringToObject(ctx, "ssl_ja3s_hash", a_ssl->shello->ja3s.value);
+		}
+		if(strlen(a_ssl->shello->ja4s.value) >0)
+		{
+			cJSON_AddStringToObject(ctx, "ssl_ja4s_hash", a_ssl->shello->ja4s.value);
 		}
 		break;
 	case SSL_CERTIFICATE_DETAIL:

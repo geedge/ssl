@@ -4,7 +4,9 @@
         "ssl_sni": "sync.targeting.unrulymedia.com",
         "ssl_client_version": "TLS1.2",
         "ssl_ja3_hash": "bc93a67ef4492974195865dc0262e65e",
+        "ssl_ja4_hash": "t13d1516h2_8daaf6152771_e5627efa2ab1",
         "ssl_ja3s_hash": "b898351eb5e266aefd3723d466935494",
+        "ssl_ja4s_hash": "t1205h2_c02f_bec8bdbaef8a",
         "ssl_cert_version": "v3",
         "ssl_cert_Issuer": "Sectigo RSA Domain Validation Secure Server CA;Sectigo Limited;;Salford;;Greater Manchester;GB",
         "ssl_cert_IssuerCN": "Sectigo RSA Domain Validation Secure Server CA",
@@ -27,7 +29,9 @@
         "ssl_sni": "www.missionsports.org",
         "ssl_client_version": "TLS1.2",
         "ssl_ja3_hash": "a69708a64f853c3bcc214c2c5faf84f3",
+        "ssl_ja4_hash": "t12d2010h2_2a284e3b0c56_f05fdf8c38a9",
         "ssl_ja3s_hash": "10a2ad147a870ef37af153dea9fe4dd3",
+        "ssl_ja4s_hash": "t1205h1_c02b_cbb8871a0652",
         "ssl_cert_version": "v3",
         "ssl_cert_Issuer": "DigiCert TLS RSA SHA256 2020 CA1;DigiCert Inc;;;;;US",
         "ssl_cert_IssuerCN": "DigiCert TLS RSA SHA256 2020 CA1",
@@ -53,6 +57,7 @@
         "ssl_ech": "1",
         "ssl_client_version": "TLS1.2",
         "ssl_ja3_hash": "c3db97da3b30171e5cf9de314584b555",
+        "ssl_ja4_hash": "t13d1516h2_8daaf6152771_02713d6af862",
         "name": "SSL_RESULT_3"
     }
 ]

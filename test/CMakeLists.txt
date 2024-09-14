@@ -5,6 +5,7 @@ project(${lib_name}_test)
 include(ExternalProject)
 #### Protoco_test_run
 
+include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 ExternalProject_Add(ProtoTest PREFIX ProtoTest
         URL ${CMAKE_CURRENT_SOURCE_DIR}/test_protocol_run.zip

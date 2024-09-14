@@ -50,8 +50,6 @@ else()
 endif()
 
 include_directories(/opt/MESA/include/MESA/)
-include_directories(./src/inc/)
-include_directories(./src/)
 include_directories(include)
 
 add_subdirectory(support)

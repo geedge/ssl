@@ -30,7 +30,10 @@ enum ssl_interested_region
 #define TLSV1_0_VERSION		0x0301
 #define TLSV1_1_VERSION		0x0302
 #define TLSV1_2_VERSION		0x0303
+#define TLSV1_3_VERSION		0x0304
 #define DTLSV1_0_VERSION	0xfeff
+#define DTLSV1_2_VERSION	0xfefd
+#define DTLSV1_3_VERSION	0xfefc
 #define DTLSV1_0_VERSION_NOT 0x0100
 #define TLCPV1_VERSION		0x0101
 
@@ -80,8 +83,8 @@ struct ssl_extenstions;
 #define MAX_JA_MD5_STR_LEN		128
 struct ssl_ja_fingerprint
 {
-	int md5_len;
-	char md5[MAX_JA_MD5_STR_LEN];
+	int value_sz;
+	char value[MAX_JA_MD5_STR_LEN];
 };
 
 #define	MAX_SERVER_NAME_LEN	512
@@ -100,6 +103,7 @@ struct ssl_client_hello
 	struct ssl_encrypt_server_name esni;
 	char server_name[MAX_SERVER_NAME_LEN];
 	struct ssl_ja_fingerprint ja3;
+	struct ssl_ja_fingerprint ja4;
 };
 
 struct ssl_server_hello
@@ -108,12 +112,14 @@ struct ssl_server_hello
 	unsigned short version;
 	unsigned short extension_len;
 	unsigned short extension_num;
-	struct ssl_ja_fingerprint ja3s;
+
 	struct ssl_random random;
 	struct ssl_l1v session;
 	struct ssl_l2v ciphersuites;
 	struct ssl_l1v compress_method;
 	struct ssl_extenstions *extensions;
+	struct ssl_ja_fingerprint ja3s;
+	struct ssl_ja_fingerprint ja4s;
 };
 
 struct ssl_new_session_ticket

@@ -5,6 +5,7 @@
         "ssl_ech": "1",
         "ssl_client_version": "TLS1.2",
         "ssl_ja3_hash": "afa0d02228072fc4b02a7772a668c64a",
+        "ssl_ja4_hash": "t13d1516h2_8daaf6152771_02713d6af862",
         "name": "SSL_RESULT_1"
     }
 ]
