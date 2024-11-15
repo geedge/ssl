@@ -61,8 +61,3 @@ make
 if [ -n "${PACKAGE}" ]; then
 	make package
 fi
-
-if [ -n "${UPLOAD_RPM}" ]; then	
-	cp ~/rpm_upload_tools.py ./
-	python3 rpm_upload_tools.py ${PULP3_REPO_NAME} ${PULP3_DIST_NAME} *.rpm
-fi

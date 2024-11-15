@@ -42,6 +42,7 @@ if (CMAKE_CXX_CPPCHECK)
             "--suppress=unreachableCode"
             "--suppress=constParameter"
             "--suppress=variableScope"
+            "--suppress=cstyleCast"
             "--suppress=*:${PROJECT_SOURCE_DIR}/src/utstring.h"
     )
   message("cppcheck start...")
@@ -74,7 +75,7 @@ else()
 	set_target_properties(ssl PROPERTIES OUTPUT_NAME ${lib_name})
 endif()
 
-set(CMAKE_INSTALL_PREFIX /home/mesasoft/sapp_run/)
+set(CMAKE_INSTALL_PREFIX /opt/tsg/sapp/)
 
 enable_testing()
 add_subdirectory(test)
