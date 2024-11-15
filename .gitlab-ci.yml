@@ -203,7 +203,6 @@ test_in_aarch64_rocky9:
   stage: upload
   image: $BUILD_IMAGE_X86_64_ROCKY8
   before_script:
-    - yum install -y perl-core openssl
     - pwd; ls -l ; cd build ; ls -l
     - cp /root/rpm_upload_tools.py ./  
   variables:
@@ -226,7 +225,8 @@ rpm_upload_for_x86_64_rocky8:
   stage: upload
   image: $BUILD_IMAGE_AARCH64_ROCKY9
   before_script:
-    - yum install -y perl-core openssl
+    - yum install -y openssl-devel
+    - python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
     - pwd; ls -l ; cd build ; ls -l
     - cp /root/rpm_upload_tools.py ./  
   variables:
