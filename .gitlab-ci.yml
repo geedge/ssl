@@ -3,7 +3,7 @@ variables:
   BUILD_PADDING_PREFIX: /tmp/padding_for_CPACK_RPM_BUILD_SOURCE_DIRS_PREFIX_PREFIX_PREFIX_PREFIX_PREFIX_PREFIX/
   BUILD_IMAGE_X86_64_ROCKY8: "git.mesalab.cn:7443/mesa_platform/build-env:rocky8-for-sapp"
   BUILD_IMAGE_AARCH64_ROCKY9: "git.mesalab.cn:7443/mesa_platform/build-env:rocky9-aarch64"
-  INSTALL_DEPENDENCY_PLATFORM:  sapp-devel sapp libasan systemd-devel libnsl libuuid-devel perl-core
+  INSTALL_DEPENDENCY_PLATFORM:  sapp-devel sapp libasan systemd-devel libnsl libuuid-devel perl-core openssl
   INSTALL_DEPENDENCY_FRAMEWORK:  libMESA_handle_logger-devel libcjson-devel libMESA_field_stat2-devel framework_env libMESA_prof_load-devel libbreakpad_mini-devel libMESA_htable-devel libfieldstat3 libuuid libfieldstat4-devel
   SYMBOL_TARGET: ssl
   INSTALL_PREFIX: "/opt/tsg/sapp/"
@@ -225,7 +225,7 @@ rpm_upload_for_x86_64_rocky8:
   stage: upload
   image: $BUILD_IMAGE_AARCH64_ROCKY9
   before_script:
-    - pwd; ls -l ; cd build ; ls -l
+    - pwd; ls -l ; cd build ; rm ssl.so;  ls -l
     - cp /root/rpm_upload_tools.py ./  
   variables:
     PULP3_REPO_NAME: protocol-stable-aarch64.el9
