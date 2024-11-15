@@ -225,10 +225,8 @@ rpm_upload_for_x86_64_rocky8:
   stage: upload
   image: $BUILD_IMAGE_AARCH64_ROCKY9
   before_script:
-    - pip3 uninstall requests
-    - pip3 install requests
-    - pip3 install --upgrade urllib3 requests
-    - python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
+    - pip3 uninstall requests urllib3 -y
+    - pip3 install requests urllib3 -y
     - pwd; ls -l ; cd build ; ls -l
     - cp /root/rpm_upload_tools.py ./  
   variables:
