@@ -226,7 +226,7 @@ rpm_upload_for_x86_64_rocky8:
   image: $BUILD_IMAGE_AARCH64_ROCKY9
   before_script:
     - pip3 uninstall requests urllib3 -y
-    - pip3 install requests urllib3 -y
+    - pip3 install requests urllib3
     - pwd; ls -l ; cd build ; ls -l
     - cp /root/rpm_upload_tools.py ./  
   variables:
